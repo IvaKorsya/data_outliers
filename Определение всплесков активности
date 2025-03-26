@@ -1,0 +1,104 @@
+from google.colab import drive
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from IPython.display import display
+import glob
+
+# Монтирование Google Drive
+drive.mount('/content/drive', force_remount=True)
+
+def load_all_data(folder_path):
+    """Загрузка и предобработка данных"""
+    all_files = sorted(glob.glob(f"{folder_path}/data_2024-10-*.parquet"))
+    dfs = []
+    
+    for file in all_files:
+        try:
+            df = pd.read_parquet(file)
+            df['ts'] = pd.to_datetime(df['ts'])
+            df['date'] = df['ts'].dt.date
+            df['hour'] = df['ts'].dt.hour
+            df['minute'] = df['ts'].dt.minute
+            
+            # Помечаем ботов (включая скрытых)
+            if 'ua_is_bot' in df.columns:
+                df['is_bot'] = np.where(pd.to_numeric(df['ua_is_bot'], errors='coerce') > 0, True, False)
+            else:
+                df['is_bot'] = False
+                
+            dfs.append(df)
+            print(f"Успешно загружен: {file.split('/')[-1]}")
+        except Exception as e:
+            print(f"Ошибка при загрузке {file}: {e}")
+    
+    if not dfs:
+        raise ValueError("Не удалось загрузить ни одного файла")
+    return pd.concat(dfs, ignore_index=True)
+
+def detect_anomalies(df):
+    """Поиск аномалий во временных рядах"""
+    # Агрегация по 5-минутным интервалам
+    df['time_interval'] = df['ts'].dt.floor('5min')
+    activity = df.groupby('time_interval').agg(
+        requests=('ip', 'count'),
+        unique_ips=('ip', 'nunique'),
+        bot_ratio=('is_bot', 'mean')
+    ).reset_index()
+    
+    # Метод Isolation Forest для выявления аномалий
+    model = IsolationForest(contamination=0.05, random_state=42)
+    anomalies = model.fit_predict(activity[['requests', 'unique_ips']])
+    activity['is_anomaly'] = np.where(anomalies == -1, True, False)
+    
+    return activity
+
+def plot_anomalies(activity):
+    """Визуализация аномалий"""
+    plt.figure(figsize=(15, 6))
+    
+    # График запросов с аномалиями
+    plt.subplot(1, 2, 1)
+    plt.plot(activity['time_interval'], activity['requests'], label='Запросы', color='blue')
+    plt.scatter(
+        activity[activity['is_anomaly']]['time_interval'],
+        activity[activity['is_anomaly']]['requests'],
+        color='red', label='Аномалии'
+    )
+    plt.title('Запросы по времени (5-мин интервалы)')
+    plt.xlabel('Время')
+    plt.ylabel('Количество запросов')
+    plt.legend()
+    
+    # Соотношение ботов в аномалиях
+    plt.subplot(1, 2, 2)
+    anomaly_data = activity[activity['is_anomaly']]
+    if not anomaly_data.empty:
+        plt.bar(
+            ['Боты', 'Люди'],
+            [anomaly_data['bot_ratio'].mean(), 1 - anomaly_data['bot_ratio'].mean()],
+            color=['red', 'green']
+        )
+        plt.title('Доля ботов в аномалиях')
+        plt.ylabel('Доля')
+    else:
+        plt.text(0.5, 0.5, 'Аномалий не найдено', ha='center')
+    
+    plt.tight_layout()
+    plt.show()
+
+# Основной анализ
+try:
+    folder_path = '/content/drive/MyDrive/dataset'
+    df = load_all_data(folder_path)
+    activity = detect_anomalies(df)
+    
+    # Топ аномальных интервалов
+    print("\nТоп-5 аномальных интервалов:")
+    display(activity[activity['is_anomaly']].sort_values('requests', ascending=False).head(5))
+    
+    plot_anomalies(activity)
+
+except Exception as e:
+    print(f"\nОшибка при анализе: {e}")
