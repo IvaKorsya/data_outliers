@@ -3,88 +3,89 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import display
-# Укажите путь к вашему файлу
-file_path = '/content/drive/MyDrive/dataset/data_2024-10-04.parquet'#свой путь
+import glob
 
-# 1. Загрузка данных
-def load_data(file_path):
-    try:
-        df = pd.read_parquet(file_path)
-        df['ts'] = pd.to_datetime(df['ts'])
-        return df
-    except Exception as e:
-        print(f"Ошибка при чтении файла: {e}")
-        raise
-def classify_traffic(df, human_threshold=100, bot_threshold=500):
-    """Классификация трафика без распаковки нескольких значений"""
-    df = df.copy()
-    df['second'] = df['ts'].dt.floor('1s')
+# Монтирование Google Drive
+drive.mount('/content/drive', force_remount=True)
+
+def load_all_data(folder_path):
+    """Загрузка всех файлов данных с безопасной обработкой"""
+    all_files = sorted(glob.glob(f"{folder_path}/data_2024-10-*.parquet"))
+    dfs = []
     
-    # Группировка данных
-    traffic_stats = df.groupby(['second', 'ip']).agg(
-        requests=('ip', 'size'),
-        unique_events=('event', 'nunique'),
-        unique_urls=('url', 'nunique'),
-        user_agents=('randPAS_user_agent_id', 'nunique')
-    ).reset_index()
+    for file in all_files:
+        try:
+            df = pd.read_parquet(file)
+            # Обязательные преобразования
+            df['ts'] = pd.to_datetime(df['ts'])
+            df['date'] = df['ts'].dt.date
+            df['hour'] = df['ts'].dt.hour
+            
+            # Определение ботов (включая скрытых)
+            if 'ua_is_bot' in df.columns:
+                df['is_bot'] = np.where(pd.to_numeric(df['ua_is_bot'], errors='coerce') > 0, True, False)
+            else:
+                df['is_bot'] = False
+                
+            dfs.append(df)
+            print(f"Успешно загружен: {file.split('/')[-1]}")
+        except Exception as e:
+            print(f"Ошибка при загрузке {file}: {e}")
     
-    # Упрощенные критерии классификации
-    traffic_stats['category'] = np.where(
-        traffic_stats['requests'] >= bot_threshold,
-        'bot',
-        np.where(
-            traffic_stats['requests'] >= human_threshold,
-            'human',
-            'normal'
-        )
+    if not dfs:
+        raise ValueError("Не удалось загрузить ни одного файла")
+    return pd.concat(dfs, ignore_index=True)
+
+def detect_hidden_bots(df):
+    """Выявление скрытых ботов по поведенческим признакам"""
+    # Признаки ботов (настраивайте под ваши данные):
+    # 1. Слишком много запросов с одного IP
+    ip_request_counts = df['ip'].value_counts().rename('request_count')
+    df = df.merge(ip_request_counts.to_frame(), left_on='ip', right_index=True)
+    
+    # 2. Отсутствие User-Agent или подозрительные UA
+    if 'ua_header' in df.columns:
+        df['suspicious_ua'] = df['ua_header'].str.contains('bot|spider|crawl', case=False, na=False)
+    
+    # Помечаем скрытых ботов (где is_bot=False, но поведение бота)
+    df['is_hidden_bot'] = (df['is_bot'] == False) & (
+        (df['request_count'] > 100) |  # Более 100 запросов с IP
+        (df.get('suspicious_ua', False))  # Или подозрительный User-Agent
     )
     
-    # Дополнительная информация о распределении
-    print("\nСтатистика классификации:")
-    print(f"Всего записей: {len(traffic_stats)}")
-    print(f"Боты (≥{bot_threshold} запросов/сек): {len(traffic_stats[traffic_stats['category'] == 'bot'])}")
-    print(f"Люди (≥{human_threshold} запросов/сек): {len(traffic_stats[traffic_stats['category'] == 'human'])}")
-    print(f"Нормальный трафик: {len(traffic_stats[traffic_stats['category'] == 'normal'])}")
+    # Обновляем общий флаг is_bot
+    df['is_bot'] = df['is_bot'] | df['is_hidden_bot']
+    return df
+
+def analyze_activity(df):
+    """Анализ общей активности и ботов"""
+    print(f"\n{'='*50}\nОбщая статистика\n{'='*50}")
+    print(f"Всего записей: {len(df):,}")
+    print(f"Период данных: {df['date'].min()} - {df['date'].max()}")
+    print(f"Уникальных IP: {df['ip'].nunique():,}")
     
-    return traffic_stats
-
-def plot_traffic_stats(stats):
-    """Упрощенная визуализация"""
-    if not stats.empty:
-        plt.figure(figsize=(15, 5))
-        
-        # Распределение по категориям
-        plt.subplot(1, 2, 1)
-        stats['category'].value_counts().plot(kind='pie', autopct='%1.1f%%')
-        plt.title('Распределение трафика')
-        
-        # Активность по часам
-        plt.subplot(1, 2, 2)
-        stats['second'].dt.hour.value_counts().sort_index().plot(kind='bar')
-        plt.title('Активность по часам')
-        plt.xlabel('Час дня')
-        
-        plt.tight_layout()
-        plt.show()
-
-def main_analysis(file_path):
-    try:
-        # Загрузка данных
-        df = load_data(file_path)
-        
-        # Классификация трафика
-        traffic_stats = classify_traffic(df)
-        
-        # Визуализация
-        plot_traffic_stats(traffic_stats[traffic_stats['category'] != 'normal'])
-        
-        return traffic_stats
+    # Статистика по ботам
+    total_bots = df['is_bot'].sum()
+    hidden_bots = df['is_hidden_bot'].sum()
     
-    except Exception as e:
-        print(f"\nОшибка в процессе анализа: {e}")
-        return None
+    print(f"\nОбнаружено ботов: {total_bots:,} ({total_bots/len(df):.1%})")
+    print(f"Из них скрытых: {hidden_bots:,} ({hidden_bots/len(df):.1%})")
+    
+    # Визуализация
+    plt.figure(figsize=(10, 4))
+    plt.bar(['Люди', 'Боты (явные)', 'Боты (скрытые)'],
+            [len(df) - total_bots, total_bots - hidden_bots, hidden_bots],
+            color=['green', 'red', 'orange'])
+    plt.title('Распределение запросов')
+    plt.ylabel('Количество запросов')
+    plt.show()
 
-# Запуск анализа
-drive.mount('/content/drive', force_remount=True)
-file_path = '/content/drive/MyDrive/dataset/data_2024-10-04.parquet'#тут тоже свой путь указать
-result = main_analysis(file_path)
+# Загрузка и анализ
+try:
+    folder_path = '/content/drive/MyDrive/dataset'
+    df = load_all_data(folder_path)
+    df = detect_hidden_bots(df)  # Выявляем скрытых ботов
+    analyze_activity(df)         # Общий анализ
+
+except Exception as e:
+    print(f"\nОшибка при анализе: {e}")
