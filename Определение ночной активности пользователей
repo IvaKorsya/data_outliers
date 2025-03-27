@@ -1,0 +1,160 @@
+from google.colab import drive
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from IPython.display import display
+import glob
+
+# Монтирование Google Drive
+drive.mount('/content/drive', force_remount=True)
+
+def load_all_data(folder_path):
+    """Загрузка всех файлов данных с обработкой ua_is_bot"""
+    all_files = sorted(glob.glob(f"{folder_path}/data_2024-10-*.parquet"))
+    dfs = []
+    
+    for file in all_files:
+        try:
+            df = pd.read_parquet(file)
+            df['ts'] = pd.to_datetime(df['ts'])
+            df['date'] = df['ts'].dt.date
+            df['hour'] = df['ts'].dt.hour
+            df['minute'] = df['ts'].dt.minute
+            
+            # Преобразование ua_is_bot в bool
+            if 'ua_is_bot' in df.columns:
+                df['is_bot'] = df['ua_is_bot'].fillna(0).astype(bool)
+            else:
+                df['is_bot'] = False
+                
+            dfs.append(df)
+            print(f"Успешно загружен: {file.split('/')[-1]}")
+        except Exception as e:
+            print(f"Ошибка при загрузке {file}: {e}")
+    
+    if not dfs:
+        raise ValueError("Не удалось загрузить ни одного файла")
+    return pd.concat(dfs, ignore_index=True)
+
+def analyze_night_activity(df):
+    """Анализ ночной активности (00:00-07:00)"""
+    print("\n" + "="*50)
+    print("Анализ ночной активности (00:00 - 07:00)")
+    print("="*50)
+    
+    night_data = df[df['hour'].between(0, 7)]
+    
+    if night_data.empty:
+        print("\nНет данных за ночной период")
+        return
+    
+    # Общая статистика
+    print(f"\nВсего событий за ночь: {len(night_data):,}")
+    print(f"Уникальных IP: {night_data['ip'].nunique():,}")
+    print(f"Запросов от ботов: {night_data['is_bot'].sum():,} ({night_data['is_bot'].mean():.1%})")
+    
+    # Анализ по часам
+    hour_stats = night_data.groupby('hour').agg(
+        ips=('ip', 'nunique'),
+        requests=('ip', 'size'),
+        bots=('is_bot', 'sum')
+    )
+    print("\nАктивность по часам:")
+    display(hour_stats)
+    
+    # Визуализация
+    plt.figure(figsize=(15, 5))
+    plt.subplot(1, 2, 1)
+    hour_stats['requests'].plot(kind='bar', color='navy')
+    plt.title('Запросы по часам (00:00-07:00)')
+    plt.xlabel('Час ночи')
+    
+    plt.subplot(1, 2, 2)
+    night_data['date'].value_counts().sort_index().plot(kind='bar', color='darkblue')
+    plt.title('Распределение по дням')
+    plt.tight_layout()
+    plt.show()
+    
+    # Анализ аномалий
+    analyze_anomalies(night_data, "ночной период (00:00-07:00)")
+
+def analyze_specific_hour(df, target_date, target_hour):
+    """Анализ конкретного часа в конкретную дату"""
+    print("\n" + "="*50)
+    print(f"Анализ активности {target_date} в {target_hour}:00")
+    print("="*50)
+    
+    hour_data = df[(df['date'] == pd.to_datetime(target_date).date()) & 
+                 (df['hour'] == target_hour)]
+    
+    if hour_data.empty:
+        print(f"\nНет данных за {target_date} {target_hour}:00")
+        return
+    
+    # Статистика за час
+    print(f"\nВсего событий: {len(hour_data):,}")
+    print(f"Уникальных IP: {hour_data['ip'].nunique():,}")
+    print(f"Боты: {hour_data['is_bot'].sum():,} ({hour_data['is_bot'].mean():.1%})")
+    print(f"Средняя активность: {len(hour_data)/hour_data['ip'].nunique():.1f} запросов/IP")
+    
+    # Топ активных IP
+    ip_stats = hour_data.groupby('ip').agg(
+        requests=('ip', 'size'),
+        is_bot=('is_bot', 'max')
+    ).sort_values('requests', ascending=False).head(10)
+    
+    print("\nТоп-10 активных IP:")
+    display(ip_stats)
+    
+    # Визуализация
+    plt.figure(figsize=(12, 6))
+    ip_stats['requests'].plot(kind='barh', color=ip_stats['is_bot'].map({True: 'red', False: 'green'}))
+    plt.title(f'Топ IP {target_date} {target_hour}:00\nКрасные - боты, Зеленые - люди')
+    plt.xlabel('Количество запросов')
+    plt.show()
+    
+    # Анализ аномалий
+    analyze_anomalies(hour_data, f"{target_date} {target_hour}:00")
+
+def analyze_anomalies(data, period_name):
+    """Обнаружение аномальной активности"""
+    anomalies = data.groupby(['ip', 'is_bot']).size().reset_index(name='requests')
+    anomalies = anomalies[anomalies['requests'] > 100]
+    
+    if not anomalies.empty:
+        print(f"\nОбнаружены аномалии в {period_name}:")
+        print(f"IP с >100 запросами: {len(anomalies)}")
+        print("Распределение:")
+        display(anomalies.groupby('is_bot').agg(
+            count=('ip', 'size'),
+            avg_requests=('requests', 'mean'),
+            max_requests=('requests', 'max')
+        ))
+    else:
+        print(f"\nАномалий не обнаружено в {period_name}")
+
+# Основной анализ
+try:
+    folder_path = '/content/drive/MyDrive/dataset'
+    df = load_all_data(folder_path)
+    
+    print(f"\nОбъединено {len(df):,} записей за период {df['date'].min()} - {df['date'].max()}")
+    print(f"Общее количество ботов: {df['is_bot'].sum():,} ({df['is_bot'].mean():.1%})")
+    
+    # 1. Анализ всей ночной активности
+    analyze_night_activity(df)
+    
+    # 2. Отдельный анализ 9 октября в 6:00
+    analyze_specific_hour(df, '2024-10-09', 6)
+    
+    # 3. Дополнительная статистика
+    print("\n" + "="*50)
+    print("Дополнительная статистика")
+    print("="*50)
+    print(f"Всего записей в данных: {len(df):,}")
+    print(f"Период данных: {df['date'].min()} - {df['date'].max()}")
+    print(f"Общее количество уникальных IP: {df['ip'].nunique():,}")
+    print(f"Процент ботов: {df['is_bot'].mean():.1%}")
+
+except Exception as e:
+    print(f"\nОшибка при анализе: {e}")

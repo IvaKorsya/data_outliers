@@ -1,0 +1,91 @@
+from google.colab import drive
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from IPython.display import display
+import glob
+
+# Монтирование Google Drive
+drive.mount('/content/drive', force_remount=True)
+
+def load_all_data(folder_path):
+    """Загрузка всех файлов данных с безопасной обработкой"""
+    all_files = sorted(glob.glob(f"{folder_path}/data_2024-10-*.parquet"))
+    dfs = []
+    
+    for file in all_files:
+        try:
+            df = pd.read_parquet(file)
+            # Обязательные преобразования
+            df['ts'] = pd.to_datetime(df['ts'])
+            df['date'] = df['ts'].dt.date
+            df['hour'] = df['ts'].dt.hour
+            
+            # Определение ботов (включая скрытых)
+            if 'ua_is_bot' in df.columns:
+                df['is_bot'] = np.where(pd.to_numeric(df['ua_is_bot'], errors='coerce') > 0, True, False)
+            else:
+                df['is_bot'] = False
+                
+            dfs.append(df)
+            print(f"Успешно загружен: {file.split('/')[-1]}")
+        except Exception as e:
+            print(f"Ошибка при загрузке {file}: {e}")
+    
+    if not dfs:
+        raise ValueError("Не удалось загрузить ни одного файла")
+    return pd.concat(dfs, ignore_index=True)
+
+def detect_hidden_bots(df):
+    """Выявление скрытых ботов по поведенческим признакам"""
+    # Признаки ботов (настраивайте под ваши данные):
+    # 1. Слишком много запросов с одного IP
+    ip_request_counts = df['ip'].value_counts().rename('request_count')
+    df = df.merge(ip_request_counts.to_frame(), left_on='ip', right_index=True)
+    
+    # 2. Отсутствие User-Agent или подозрительные UA
+    if 'ua_header' in df.columns:
+        df['suspicious_ua'] = df['ua_header'].str.contains('bot|spider|crawl', case=False, na=False)
+    
+    # Помечаем скрытых ботов (где is_bot=False, но поведение бота)
+    df['is_hidden_bot'] = (df['is_bot'] == False) & (
+        (df['request_count'] > 100) |  # Более 100 запросов с IP
+        (df.get('suspicious_ua', False))  # Или подозрительный User-Agent
+    )
+    
+    # Обновляем общий флаг is_bot
+    df['is_bot'] = df['is_bot'] | df['is_hidden_bot']
+    return df
+
+def analyze_activity(df):
+    """Анализ общей активности и ботов"""
+    print(f"\n{'='*50}\nОбщая статистика\n{'='*50}")
+    print(f"Всего записей: {len(df):,}")
+    print(f"Период данных: {df['date'].min()} - {df['date'].max()}")
+    print(f"Уникальных IP: {df['ip'].nunique():,}")
+    
+    # Статистика по ботам
+    total_bots = df['is_bot'].sum()
+    hidden_bots = df['is_hidden_bot'].sum()
+    
+    print(f"\nОбнаружено ботов: {total_bots:,} ({total_bots/len(df):.1%})")
+    print(f"Из них скрытых: {hidden_bots:,} ({hidden_bots/len(df):.1%})")
+    
+    # Визуализация
+    plt.figure(figsize=(10, 4))
+    plt.bar(['Люди', 'Боты (явные)', 'Боты (скрытые)'],
+            [len(df) - total_bots, total_bots - hidden_bots, hidden_bots],
+            color=['green', 'red', 'orange'])
+    plt.title('Распределение запросов')
+    plt.ylabel('Количество запросов')
+    plt.show()
+
+# Загрузка и анализ
+try:
+    folder_path = '/content/drive/MyDrive/dataset'
+    df = load_all_data(folder_path)
+    df = detect_hidden_bots(df)  # Выявляем скрытых ботов
+    analyze_activity(df)         # Общий анализ
+
+except Exception as e:
+    print(f"\nОшибка при анализе: {e}")
