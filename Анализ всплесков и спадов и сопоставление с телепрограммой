@@ -1,0 +1,86 @@
+import pandas as pd
+import numpy as np
+import glob
+import matplotlib.pyplot as plt
+from scipy.signal import argrelextrema
+
+# Пути к файлам
+dataset_path = '/content/drive/MyDrive/dataset/*.parquet'  # Все паркет-файлы
+schedule_file = '/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv'  # Телепрограмма
+
+# 1. Загружаем все паркет-файлы и объединяем
+all_files = glob.glob(dataset_path)
+data = pd.concat([pd.read_parquet(f) for f in all_files])
+
+# 2. Фильтруем только `page_view`
+data = data[data['event'] == 'page_view']
+
+# 3. Преобразуем `ts` в datetime и группируем по минутам
+data['ts'] = pd.to_datetime(data['ts'])
+activity = data.groupby(data['ts'].dt.floor('min')).size().reset_index(name='requests')
+
+# 4. Ищем локальные максимумы (всплески) и минимумы (спады)
+# Для максимумов
+max_indices = argrelextrema(activity['requests'].values, np.greater, order=10)[0]
+activity['local_max'] = np.nan
+activity.loc[max_indices, 'local_max'] = activity.loc[max_indices, 'requests']
+
+# Для минимумов
+min_indices = argrelextrema(activity['requests'].values, np.less, order=10)[0]
+activity['local_min'] = np.nan
+activity.loc[min_indices, 'local_min'] = activity.loc[min_indices, 'requests']
+
+# Топ-10 всплесков и топ-10 спадов
+peaks = activity.nlargest(10, 'requests')
+dips = activity.nsmallest(10, 'requests')
+
+# 5. Загружаем телепрограмму и рассчитываем `end_ts`
+schedule_df = pd.read_csv(schedule_file)
+schedule_df['start_ts'] = pd.to_datetime(schedule_df['start_ts'])
+schedule_df['end_ts'] = schedule_df['start_ts'] + pd.to_timedelta(schedule_df['dur'], unit='s')
+
+# 6. Сопоставляем всплески и спады с передачами
+def find_show(timestamp):
+    show = schedule_df[(schedule_df['start_ts'] <= timestamp) & (schedule_df['end_ts'] >= timestamp)]
+    return show[['title', 'channel_id']].to_dict(orient='records')
+
+peaks['matched_shows'] = peaks['ts'].apply(find_show)
+dips['matched_shows'] = dips['ts'].apply(find_show)
+
+# 7. Визуализация
+plt.figure(figsize=(14, 8))
+plt.plot(activity['ts'], activity['requests'], label='Все запросы', color='blue', alpha=0.7)
+plt.scatter(peaks['ts'], peaks['requests'], color='red', label='Топ-10 всплесков', zorder=3)
+plt.scatter(dips['ts'], dips['requests'], color='green', label='Топ-10 спадов', zorder=3)
+plt.xlabel('Время')
+plt.ylabel('Количество запросов')
+plt.title('Всплески и спады активности с привязкой к телепрограмме')
+plt.legend()
+plt.xticks(rotation=45)
+plt.grid()
+plt.show()
+
+# 8. Улучшенный вывод
+print("\n=== Всплески активности и соответствующие передачи ===\n")
+for index, row in peaks.iterrows():
+    print(f"📌 Время всплеска: {row['ts']}")
+    print(f"   🔺 Запросов: {row['requests']}")
+    if row['matched_shows']:
+        print("   📺 Передачи в этот момент:")
+        for show in row['matched_shows']:
+            print(f"      - {show['title']} (Канал {show['channel_id']})")
+    else:
+        print("   ❌ Нет совпадений с телепрограммой.")
+    print("-" * 50)
+
+print("\n=== Спады активности и соответствующие передачи ===\n")
+for index, row in dips.iterrows():
+    print(f"📌 Время спада: {row['ts']}")
+    print(f"   🔻 Запросов: {row['requests']}")
+    if row['matched_shows']:
+        print("   📺 Передачи в этот момент:")
+        for show in row['matched_shows']:
+            print(f"      - {show['title']} (Канал {show['channel_id']})")
+    else:
+        print("   ❌ Нет совпадений с телепрограммой.")
+    print("-" * 50)
