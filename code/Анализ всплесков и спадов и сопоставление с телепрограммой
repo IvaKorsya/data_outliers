@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 import os
 
+from google.colab import drive
+drive.mount('/content/drive')
+
+
 def analyze_data(dataset_path, schedule_file):
     # 1. Загружаем все паркет-файлы и объединяем
     all_files = glob.glob(dataset_path)
