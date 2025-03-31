@@ -109,4 +109,4 @@ data_outliers/
 │   ├── Определение ночной активности пользователей.py      # Ночной анализ
 ├── README.md
 ├── requirements.txt
-└── DOCUMENTATION                          # Документация
+└── DOCUMENTATION.md                         # Документация
