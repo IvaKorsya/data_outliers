@@ -207,8 +207,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
-    plot_anomalies(activity)
-
-except Exception as e:
-    print(f"\nОшибка при анализе: {e}")
