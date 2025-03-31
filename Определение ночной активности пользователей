@@ -4,15 +4,51 @@ import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import display
 import glob
+import os
+from datetime import datetime
 
-# Монтирование Google Drive
-drive.mount('/content/drive', force_remount=True)
+def get_user_input():
+    """Функция для получения пользовательского ввода с валидацией"""
+    # Запрос пути к данным
+    while True:
+        path = input("Введите путь к папке с данными (например: /content/drive/MyDrive/dataset): ").strip()
+        if os.path.exists(path):
+            break
+        print(f"Ошибка: путь '{path}' не существует. Попробуйте снова.")
+    
+    # Запрос даты и часа для детального анализа
+    while True:
+        date_input = input("Введите дату для детального анализа (ГГГГ-ММ-ДД или 'нет'): ").strip()
+        if date_input.lower() == 'нет':
+            target_date = None
+            break
+        try:
+            target_date = datetime.strptime(date_input, '%Y-%m-%d').date()
+            break
+        except ValueError:
+            print("Неверный формат даты. Используйте ГГГГ-ММ-ДД или введите 'нет'.")
+    
+    if target_date:
+        while True:
+            try:
+                target_hour = int(input("Введите час для анализа (0-23): "))
+                if 0 <= target_hour <= 23:
+                    break
+                print("Час должен быть между 0 и 23.")
+            except ValueError:
+                print("Введите целое число от 0 до 23.")
+    else:
+        target_hour = None
+    
+    return path, target_date, target_hour
 
 def load_all_data(folder_path):
     """Загрузка всех файлов данных с обработкой ua_is_bot"""
     all_files = sorted(glob.glob(f"{folder_path}/data_2024-10-*.parquet"))
-    dfs = []
+    if not all_files:  # Альтернативный вариант поиска
+        all_files = sorted(glob.glob(f"{folder_path}/*.parquet"))
     
+    dfs = []
     for file in all_files:
         try:
             df = pd.read_parquet(file)
@@ -35,6 +71,70 @@ def load_all_data(folder_path):
     if not dfs:
         raise ValueError("Не удалось загрузить ни одного файла")
     return pd.concat(dfs, ignore_index=True)
+
+def extended_analysis(df):
+    """Расширенный анализ данных"""
+    print("\n" + "="*50)
+    print("Расширенный анализ данных")
+    print("="*50)
+    
+    # 1. Общая статистика
+    print(f"\nВсего записей: {len(df):,}")
+    print(f"Период данных: {df['date'].min()} - {df['date'].max()}")
+    print(f"Уникальных IP: {df['ip'].nunique():,}")
+    print(f"Боты: {df['is_bot'].sum():,} ({df['is_bot'].mean():.1%})")
+    
+    # 2. Суточная активность
+    daily_stats = df.groupby('date').agg(
+        requests=('ip', 'size'),
+        unique_ips=('ip', 'nunique'),
+        bots=('is_bot', 'sum')
+    )
+    print("\nСуточная статистика:")
+    display(daily_stats)
+    
+    # 3. Почасовой анализ
+    hourly_stats = df.groupby('hour').agg(
+        requests=('ip', 'size'),
+        unique_ips=('ip', 'nunique'),
+        bot_percentage=('is_bot', 'mean')
+    )
+    print("\nСредняя активность по часам:")
+    display(hourly_stats)
+    
+    # 4. Визуализация
+    plt.figure(figsize=(15, 10))
+    
+    # График 1: Суточная активность
+    plt.subplot(2, 2, 1)
+    daily_stats['requests'].plot(kind='bar', color='blue', alpha=0.7)
+    plt.title('Общая активность по дням')
+    plt.xlabel('Дата')
+    plt.ylabel('Запросов')
+    
+    # График 2: Почасовая активность
+    plt.subplot(2, 2, 2)
+    hourly_stats['requests'].plot(kind='bar', color='green', alpha=0.7)
+    plt.title('Средняя активность по часам')
+    plt.xlabel('Час дня')
+    plt.ylabel('Запросов')
+    
+    # График 3: Распределение ботов
+    plt.subplot(2, 2, 3)
+    df['is_bot'].value_counts().plot(kind='pie', autopct='%1.1f%%', 
+                                   colors=['green', 'red'], 
+                                   labels=['Люди', 'Боты'])
+    plt.title('Распределение запросов')
+    
+    # График 4: Топ IP
+    plt.subplot(2, 2, 4)
+    top_ips = df['ip'].value_counts().head(10)
+    top_ips.plot(kind='barh', color='purple', alpha=0.7)
+    plt.title('Топ-10 самых активных IP')
+    plt.xlabel('Количество запросов')
+    
+    plt.tight_layout()
+    plt.show()
 
 def analyze_night_activity(df):
     """Анализ ночной активности (00:00-07:00)"""
@@ -134,27 +234,31 @@ def analyze_anomalies(data, period_name):
         print(f"\nАномалий не обнаружено в {period_name}")
 
 # Основной анализ
-try:
-    folder_path = '/content/drive/MyDrive/dataset'
-    df = load_all_data(folder_path)
+def main():
+    print("Анализ активности пользователей и ботов")
+    drive.mount('/content/drive', force_remount=True)
     
-    print(f"\nОбъединено {len(df):,} записей за период {df['date'].min()} - {df['date'].max()}")
-    print(f"Общее количество ботов: {df['is_bot'].sum():,} ({df['is_bot'].mean():.1%})")
-    
-    # 1. Анализ всей ночной активности
-    analyze_night_activity(df)
-    
-    # 2. Отдельный анализ 9 октября в 6:00
-    analyze_specific_hour(df, '2024-10-09', 6)
-    
-    # 3. Дополнительная статистика
-    print("\n" + "="*50)
-    print("Дополнительная статистика")
-    print("="*50)
-    print(f"Всего записей в данных: {len(df):,}")
-    print(f"Период данных: {df['date'].min()} - {df['date'].max()}")
-    print(f"Общее количество уникальных IP: {df['ip'].nunique():,}")
-    print(f"Процент ботов: {df['is_bot'].mean():.1%}")
+    try:
+        # Получаем пользовательский ввод
+        folder_path, target_date, target_hour = get_user_input()
+        
+        # Загрузка данных
+        df = load_all_data(folder_path)
+        
+        # 1. Расширенный анализ
+        extended_analysis(df)
+        
+        # 2. Анализ ночной активности
+        analyze_night_activity(df)
+        
+        # 3. Анализ конкретного часа (если указан)
+        if target_date is not None and target_hour is not None:
+            analyze_specific_hour(df, str(target_date), target_hour)
+        
+    except Exception as e:
+        print(f"\nОшибка при анализе: {e}")
+    finally:
+        print("\nАнализ завершен")
 
-except Exception as e:
-    print(f"\nОшибка при анализе: {e}")
+if __name__ == "__main__":
+    main()
