@@ -1,5 +1,3 @@
-#код не протестирован, пока не принимать merdge
-
 import pandas as pd
 import os
 import glob
