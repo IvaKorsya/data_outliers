@@ -9,6 +9,7 @@
 2. Аномалия множества действий без пометки бота.py - обнаружение ботов
 3. Определение всплесков активности методом Isolation Forest.py - поиск аномалий методом Isolation Forest
 4. Определение ночной активности пользователей.py - анализ ночной активности
+5. Аномалии в порядке просмотра страниц.py
    
     # Анализ всплесков и спадов и сопоставление с телепрограммой.py
    
@@ -87,6 +88,51 @@ def analyze_night_activity(
         ValueError: Если данные не содержат ночных записей
     """
     # Реализация функции..
+    
+```
+# Аномалии в порядке просмотра страниц.py
+```
+def load_and_preprocess_data(file_path) 
+-> pd.DataFrame
+
+Параметры:
+    file_path (str): Путь к файлу с данными
+
+Возвращает:
+    pd.DataFrame: Обработанный DataFrame
+    
+    
+def detect_page_number_anomalies(
+df: pd.DataFrame,
+user_id_column='randPAS_user_agent_id': str,
+session_id_column='randPAS_session_id': str
+) -> pd.DataFrame
+
+Находит аномалии в нумерации page_view_order_number:
+    - reset: текущий номер < предыдущего (например, 3 → 1),
+    - skip: текущий номер - предыдущий > 1 (например, 2 → 4),
+
+Параметры:
+    df (pd.DataFrame): DataFrame с данными
+    user_id_column (str): Название колонки с ID пользователя
+    session_id_column (str): Название колонки с ID сессии
+
+Возвращает:
+    pd.DataFrame: DataFrame с аномалиям
+    
+
+def visualize_anomalies(
+anomalies_df: pd.DataFrame, 
+total_records: int) 
+
+Создает визуализации для анализа аномалий:
+    1. Круговую диаграмму распределения типов аномалий
+    2. Соотношение нормальных и аномальных записей
+
+Параметры:
+    anomalies_df (pd.DataFrame): DataFrame с аномалиями
+    total_records (int): Общее количество записей для расчета соотношения
+    
 ```
 # Установка и использование
 ```
