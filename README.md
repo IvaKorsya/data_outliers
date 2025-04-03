@@ -159,5 +159,5 @@ data_outliers/
 │   ├── node_id_check                                                            # Анализ id видео и тегов
 │   ├── device_of_user.ipynb                                                     # Анализ  количества устройств пользователей
 ├── README.md                                                                    # Документация
-├── gitignore.md
+├── .gitignore
 ├── requirements.txt                        
