@@ -5,13 +5,15 @@
 Проект "Stranger Things" разрабатывает универсальный алгоритм для поиска аномалий в данных, включая работу в режиме, близком к реальному времени. Проект выполняется в рамках курса ОПД 2025 СПБПУ и использует данные по активности пользователей на сайте МАТЧ ТВ.
 
 Основные модули:
-1. Анализ всплесков и спадов и сопоставление с телепрограммой.py - анализ всплесков активности
-2. Аномалия множества действий без пометки бота.py - обнаружение ботов
-3. Определение всплесков активности методом Isolation Forest.py - поиск аномалий методом Isolation Forest
-4. Определение ночной активности пользователей.py - анализ ночной активности
-5. Аномалии в порядке просмотра страниц.py
+1. activity_spikes_analysis.py - анализ всплесков активности
+2. anomaly_without_tag_bot.py - обнаружение ботов
+3. activity_spikes_isolation.py - поиск аномалий методом Isolation Forest
+4. night_activity_analysis.py - анализ ночной активности
+5. page_view_anomalies.py - проверка аномалий, связанных с просмотром страниц
+6. node_id_check - проверка id видео
+7. device_of_user.ipynb  - проверка устройств, с которых выполняются действия     
    
-    # Анализ всплесков и спадов и сопоставление с телепрограммой.py
+    # activity_spikes_analysis.py
    
 ```
     def analyze_data(dataset_path: str, schedule_file: str) -> None:
@@ -26,7 +28,7 @@
         >>> analyze_data("data/*.parquet", "tv_schedule.csv")
  
 ```
-# Аномалия множества действий без пометки бота.py
+# anomaly_without_tag_bot.py
 ```
 class BotDetector:
    
@@ -44,7 +46,7 @@ class BotDetector:
     def detect_hidden_bots(self) -> pd.DataFrame:
         """Возвращает DataFrame с помеченными ботами"""
 ```
-# Определение всплесков активности методом Isolation Forest.py
+# activity_spikes_isolation.py
 ```
 def detect_anomalies(
     data_path: str,
@@ -66,7 +68,7 @@ def detect_anomalies(
             'top_anomalies': топ аномалий
         }
 ```
-# Определение ночной активности пользователей.py
+# night_activity_analysis.py
 ```
 def analyze_night_activity(
     data: pd.DataFrame,
@@ -90,7 +92,7 @@ def analyze_night_activity(
     # Реализация функции..
     
 ```
-# Аномалии в порядке просмотра страниц.py
+# page_view_anomalies.py
 ```
 def load_and_preprocess_data(file_path) 
 -> pd.DataFrame
@@ -149,10 +151,12 @@ python Анализ всплесков и спадов и сопоставлен
 ```
 data_outliers/
 ├── code/
-│   ├── Анализ всплесков и спадов и сопоставление с телепрограммой.py  # Анализ всплесков
-│   ├── Аномалия множества действий без пометки бота.py    # Детектор ботов
-│   ├──Определение всплесков активности методом Isolation Forest.py   # Поиск аномалий
-│   ├── Определение ночной активности пользователей.py      # Ночной анализ
-├── README.md
-├── requirements.txt
-└── DOCUMENTATION.md                         # Документация
+│   ├── activity_spikes_analysis.py                                              # Анализ всплесков
+│   ├── anomaly_without_tag_bot.py                                               # Детектор ботов
+│   ├── activity_spikes_isolation.py                                             # Поиск аномалий активности
+│   ├── night_activity_analysis.py                                               # Ночной анализ
+│   ├── page_view_anomalies.py                                                   # Анализ порядка просмотра страниц
+│   ├── node_id_check                                                            # Анализ id видео и тегов
+│   ├── device_of_user.ipynb                                                     # Анализ  количества устройств пользователей
+├── README.md                                                                    # Документация
+├── requirements.txt                        
