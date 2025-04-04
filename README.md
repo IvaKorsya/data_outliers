@@ -4,7 +4,8 @@
 
  # Примерный вид структуры фрейма
 anomaly_detection_framework/
-│
+
+```│
 ├── core/                      # Основная логика фреймворка
 │   ├── __init__.py
 │   ├── base_detector.py       # Абстрактный класс детектора
@@ -27,3 +28,4 @@ anomaly_detection_framework/
 │
 ├── main.py                    # Точка входа
 └── requirements.txt
+```
