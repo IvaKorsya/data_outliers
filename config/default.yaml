@@ -1,0 +1,17 @@
+data_loader:
+  google_colab: true  # Автоматическое монтирование диска в Colab
+  local_path: '/data' # Путь для локального использования
+
+detectors:
+  isolation_forest:
+    contamination: 0.05
+    random_state: 42
+    features: ['requests', 'unique_ips']
+    
+  statistical:
+    z_score_threshold: 3.0
+    window_size: 10
+    
+  behavioral:
+    bot_threshold: 100
+    check_ua: true
