@@ -9,7 +9,7 @@ anomaly_detection_framework/
 anomaly_detection_framework/
 │
 ├── configs/                        # Конфигурации для всех сред
-│   ├── colab.yaml                  # Настройки для Google Colab
+│   ├── default.yaml                  # Настройки для Google Colab
 │   ├── local.yaml                  # Локальные настройки
 │   └── production.yaml             # Продакшен-конфиг
 │
