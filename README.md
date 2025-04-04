@@ -14,7 +14,7 @@ anomaly_detection_framework/
 │   └── production.yaml       # Продакшен-конфиг
 │
 ├── core/                     # Ядро системы
-│   ├── base_detector.py      # Базовый класс детектора
+│   ├── BaseAnomalyDetector.py      # Базовый класс детектора
 │   ├── config_manager.py     # Загрузка конфигов
 │   ├── data_loader.py        # Умный загрузчик данных
 │   ├── report_generator.py   # Генерация отчетов
