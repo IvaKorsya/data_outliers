@@ -20,7 +20,7 @@ anomaly_detection_framework/
 │   ├── report_generator.py   # Генерация отчетов
 │   └── runner.py             # Оркестратор анализа
 │
-├── detectors/                # Все ваши алгоритмы (адаптированные)
+├── detectors/              
 │   ├── __init__.py
 │   ├── activity_spikes.py    # Анализ всплесков активности
 │   ├── isolation_forest.py   # Isolation Forest
