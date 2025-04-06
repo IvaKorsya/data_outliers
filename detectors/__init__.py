@@ -1,7 +1,7 @@
 from typing import List, Dict
 import pandas as pd
-from .data_loader import DataLoader
-from .report_generator import ReportGenerator
+from .core.data_loader import DataLoader
+from .core.report_generator import ReportGenerator
 
 class AnomalyDetectionFramework:
     def __init__(self):
