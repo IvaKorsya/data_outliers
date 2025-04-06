@@ -74,8 +74,6 @@ def main():
             else args.detectors.split(',')
         )
         
-        # Переопределение пути к данным если нужно
-        data_path = args.data_path or runner.config.data_loader.datasets_path
         
         # Запуск анализа
         runner.run(
