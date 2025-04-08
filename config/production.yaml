@@ -1,30 +1,44 @@
-# Продакшен конфигурация
 data_loader:
   google_colab: false
-  datasets_path: '/mnt/data/input'
-  default_file_mask: '*.parquet'
-  date_format: '%Y%m%d'           # Оптимизированный формат дат
-  max_files: 1000
+  input_path: '/mnt/data/input'
+  output_path: '/mnt/data/output'
+  file_pattern: 'data_*.parquet'
+  date_format: '%Y-%m-%d'
+  max_workers: 8
+  chunk_size: 100000
 
 reporting:
-  output_dir: '/mnt/data/output'
-  default_format: 'json'           # Машинно-читаемый формат
-  save_raw_data: false
+  default_format: 'json'
+  save_plots: true
+  save_tables: true
+  max_table_rows: 1000
+
+execution:
+  parallel: true
+  max_detectors_parallel: 4
+  timeout_minutes: 120
 
 detectors:
   common:
-    log_level: 'WARNING'
-    sample_size: 100000            # Полный анализ
+    log_level: 'INFO'
+    sample_fraction: 1.0
   
+  isolation_forest:
+    enabled: true
+    contamination: 0.05
+    n_estimators: 100
+    features: ['requests', 'unique_ips', 'bot_ratio']
+    
   node_id_check:
+    enabled: true
     required_columns:
       - url
-      - main_rubric_id
-      - content_is_longread
-      - content_editor_id
       - node_id
-    check_hourly_distribution: true
+      - content_type
+    validate_hourly: true
 
   activity_spikes:
-    time_resolution: '1min'        # Максимальная детализация
-    spike_threshold: 3.5           # Более строгий порог
+    enabled: true
+    resolution: '1min'
+    threshold: 3.5
+    min_duration: '5min'
