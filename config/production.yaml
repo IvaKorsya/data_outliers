@@ -28,4 +28,3 @@ detectors:
   activity_spikes:
     time_resolution: '1min'        # Максимальная детализация
     spike_threshold: 3.5           # Более строгий порог
-    alert_email: 'alerts@company.com'  # Уведомления о критических аномалиях
