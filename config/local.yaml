@@ -1,26 +1,41 @@
+
 data_loader:
-  google_colab: false              # Отключить Colab-специфичные функции
-  datasets_path: './data'          # Локальный путь к данным
-  default_file_mask: '*.parquet'
+  google_colab: false
+  input_path: './data'
+  output_path: './output'
+  file_pattern: 'sample_*.parquet'
   date_format: '%Y-%m-%d'
-  max_files: 50
+  max_workers: 2
+  chunk_size: 5000
 
 reporting:
-  output_dir: './output'
-  default_format: 'console'        # Удобный вывод в консоль при разработке
-  save_raw_data: true              # Сохранять сырые данные для отладки
+  default_format: 'console'
+  save_plots: false
+  save_tables: true
+  max_table_rows: 100
+
+execution:
+  parallel: false
+  timeout_minutes: 30
 
 detectors:
   common:
-    log_level: 'DEBUG'            # Подробные логи при разработке
-    sample_size: 5000
+    log_level: 'DEBUG'
+    sample_fraction: 0.1
   
+  isolation_forest:
+    enabled: true
+    contamination: 0.1
+    n_estimators: 50
+    features: ['requests', 'unique_ips']
+    
   node_id_check:
+    enabled: false
     required_columns:
       - url
       - node_id
-    check_hourly_distribution: false  # Упрощенная проверка локально
 
   activity_spikes:
-    time_resolution: '15min'       # Меньше детализация для скорости
-    spike_threshold: 2.5
+    enabled: true
+    resolution: '15min'
+    threshold: 2.0
