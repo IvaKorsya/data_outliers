@@ -1,17 +1,41 @@
 data_loader:
-  google_colab: true  # Автоматическое монтирование диска в Colab
-  local_path: '/data' # Путь для локального использования
+  google_colab: true
+  input_path: '/content/drive/MyDrive/dataset'
+  output_path: '/content/drive/MyDrive/results'
+  file_pattern: 'data_*.parquet'
+  date_format: '%Y-%m-%d'
+  max_workers: 4
+  chunk_size: 10000
+
+reporting:
+  default_format: 'html'
+  save_plots: true
+  save_tables: true
+  max_table_rows: 500
+
+execution:
+  parallel: true
+  max_detectors_parallel: 2
+  timeout_minutes: 60
 
 detectors:
+  common:
+    log_level: 'WARNING'
+    sample_fraction: 0.5
+  
   isolation_forest:
+    enabled: true
     contamination: 0.05
-    random_state: 42
-    features: ['requests', 'unique_ips']
+    n_estimators: 100
     
-  statistical:
-    z_score_threshold: 3.0
-    window_size: 10
-    
-  behavioral:
-    bot_threshold: 100
-    check_ua: true
+  node_id_check:
+    enabled: true
+    required_columns:
+      - url
+      - node_id
+      - title
+
+  activity_spikes:
+    enabled: true
+    resolution: '5min'
+    threshold: 3.0
