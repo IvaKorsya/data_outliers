@@ -2,86 +2,104 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from pathlib import Path
 import json
+import matplotlib.pyplot as plt
+from typing import Dict, Any, Optional
 
 class BaseAnomalyDetector(ABC):
-    def __init__(self, config: dict = None):
+    def __init__(self, config: Dict[str, Any] = None):
         """
-        Базовый класс для всех детекторов аномалий.
-        
-        :param config: Словарь с настройками детектора
+        Улучшенный базовый класс с поддержкой:
+        - Стандартизированной конфигурации
+        - Встроенной валидации
+        - Гибкой системы отчетности
         """
         self.config = config or {}
         self.results = None
         self._validate_config()
+        self._init_plots()
 
     @abstractmethod
-    def detect(self, data: pd.DataFrame) -> dict:
+    def detect(self, data: pd.DataFrame) -> Optional[pd.DataFrame]:
         """
-        Основной метод обнаружения аномалий.
-        Должен возвращать словарь с сырыми результатами.
+        Обновленный контракт метода:
+        - Принимает DataFrame
+        - Возвращает обработанные данные или None
+        - Сохраняет результаты в self.results
         """
         pass
 
     @abstractmethod
-    def generate_report(self) -> dict:
+    def generate_report(self) -> Dict[str, Any]:
         """
-        Генерация стандартизированного отчета.
-        Формат:
+        Новый формат отчета:
         {
             "summary": str,
-            "tables": {name: DataFrame},
-            "plots": {name: callable},
-            "metrics": dict
+            "metrics": dict,
+            "tables": Dict[str, pd.DataFrame],
+            "plots": Dict[str, callable],
+            "raw_data": Optional[pd.DataFrame]
         }
         """
         pass
 
-    def save_results(self, output_dir: str):
-        """
-        Стандартное сохранение результатов в указанную папку.
-        Автоматически создает:
-        - report.json
-        - report.html
-        - plots/
-        - data/ (при необходимости)
-        """
+    def save_results(self, output_dir: Path) -> None:
+        """Улучшенное сохранение с обработкой ошибок"""
         if not self.results:
-            raise ValueError("Сначала выполните detect()")
-            
-        report = self.generate_report()
-        output_path = Path(output_dir)
-        output_path.mkdir(exist_ok=True)
+            raise ValueError("Detection must be run before saving results")
         
-        # Сохранение JSON
-        with open(output_path / "report.json", "w") as f:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report = self.generate_report()
+
+        # Сохранение метаданных
+        with open(output_dir / "meta.json", "w") as f:
             json.dump({
+                "detector": self.__class__.__name__,
+                "config": self.config,
                 "summary": report.get("summary"),
                 "metrics": report.get("metrics", {})
             }, f, indent=2)
-        
+
         # Сохранение таблиц
         if "tables" in report:
-            tables_dir = output_path / "tables"
+            tables_dir = output_dir / "tables"
             tables_dir.mkdir(exist_ok=True)
             for name, df in report["tables"].items():
-                df.to_csv(tables_dir / f"{name}.csv", index=False)
-        
+                df.to_parquet(tables_dir / f"{name}.parquet")
+
         # Сохранение графиков
         if "plots" in report:
-            plots_dir = output_path / "plots"
+            plots_dir = output_dir / "plots"
             plots_dir.mkdir(exist_ok=True)
-            import matplotlib.pyplot as plt
-            
             for name, plot_func in report["plots"].items():
-                plot_func()
-                plt.savefig(plots_dir / f"{name}.png")
-                plt.close()
-        
-        print(f"Результаты сохранены в {output_dir}")
+                try:
+                    plot_func()
+                    plt.savefig(plots_dir / f"{name}.png", bbox_inches='tight')
+                    plt.close()
+                except Exception as e:
+                    print(f"Failed to save plot {name}: {str(e)}")
 
-    def _validate_config(self):
-        """Валидация конфигурации детектора"""
-        required_params = self.config.get("required_params", [])
-        missing = [p for p in required_params if p not in self.config]
+    def _validate_config(self) -> None:
+        """Расширенная валидация конфигурации"""
+        required = self.config.get("required_params", [])
+        missing = [p for p in required if p not in self.config]
         if missing:
-            raise ValueError(f"Отсутствуют обязательные параметры: {missing}")
+            raise ValueError(f"Missing required config parameters: {missing}")
+
+    def _init_plots(self) -> None:
+        """Инициализация стандартных настроек графиков"""
+        plt.style.use('seaborn')
+        self.plot_config = {
+            "figure.figsize": (12, 6),
+            "font.size": 12
+        }
+        plt.rcParams.update(self.plot_config)
+
+    def _filter_data(self, data: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
+        """Универсальный метод фильтрации"""
+        for col, condition in filters.items():
+            if col in data.columns:
+                if callable(condition):
+                    data = data[condition(data[col])]
+                else:
+                    data = data[data[col] == condition]
+        return data
