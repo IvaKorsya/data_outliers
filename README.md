@@ -134,8 +134,58 @@ total_records: int)
 Параметры:
     anomalies_df (pd.DataFrame): DataFrame с аномалиями
     total_records (int): Общее количество записей для расчета соотношения
-    
+
 ```
+def identify_multi_device_users(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Определяет пользователей, использующих несколько устройств в рамках сессии.
+
+    Параметры:
+        df (pd.DataFrame): DataFrame с данными сессий (randPAS_session_id, ua_is_tablet, ua_is_pc, ua_is_mobile).
+
+    Возвращает:
+        pd.DataFrame: DataFrame с добавленной колонкой 'is_multi_device_session' (True/False).
+    """
+    # (Реализация определения multi-device users)
+    pass
+
+
+def analyze_device_usage(df: pd.DataFrame, file_name: str) -> dict:
+    """
+    Анализирует использование устройств на основе данных сессий.
+
+    Параметры:
+        df (pd.DataFrame): DataFrame с данными сессий (ua_is_tablet, ua_is_pc, ua_is_mobile, randPAS_session_id, ts).
+        file_name (str): Имя файла для идентификации результатов.
+
+    Возвращает:
+        dict: Словарь с результатами анализа (device_proportions, hourly_data, multi_device_sessions, single_device_sessions, file_name) или None.
+    """
+    # (Реализация анализа device usage)
+    pass
+
+
+def visualize_device_usage(analysis_results: dict) -> None:
+    """
+    Визуализирует использование устройств (круговая и столбчатая диаграммы).
+
+    Параметры:
+        analysis_results (dict): Результаты анализа (device_proportions, hourly_data, file_name, multi_device_sessions, single_device_sessions).
+    """
+    # (Реализация визуализации)
+    pass
+
+
+def load_and_process_file(file_path: str) -> None:
+    """
+    Загружает, обрабатывает и визуализирует данные из одного Parquet-файла.
+
+    Параметры:
+        file_path (str): Путь к Parquet-файлу.
+    """
+    # (Реализация загрузки, обработки и визуализации)
+    pass
+
 # Установка и использование
 ```
 # Клонирование репозитория
