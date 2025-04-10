@@ -136,7 +136,10 @@ total_records: int)
     total_records (int): Общее количество записей для расчета соотношения
 
 ```
+# device_of_user.ipynb  
+```
 def identify_multi_device_users(df: pd.DataFrame) -> pd.DataFrame:
+
     """
     Определяет пользователей, использующих несколько устройств в рамках сессии.
 
