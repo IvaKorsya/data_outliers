@@ -63,7 +63,17 @@ def analyze_data(dataset_path, schedule_file):
 
     top_k = 10; # сколько мест в рейтинге
     top = rating_programs(schedule_file, top_k)
+ # 5.1. Сохраняем датафреймы в CSV
+    output_dir = '/content/drive/MyDrive/output_data'
+    os.makedirs(output_dir, exist_ok=True)
 
+    activity.to_csv(os.path.join(output_dir, 'activity_by_minute.csv'), index=False)
+    # Для сохранения matched_shows преобразуем в строку (иначе не сохранится)
+    peaks_copy = peaks.copy()
+    peaks_copy['matched_shows'] = peaks_copy['matched_shows'].apply(lambda x: str(x))
+    peaks_copy.to_csv(os.path.join(output_dir, 'top10_peaks_with_matches.csv'), index=False)
+
+    print(f"\n✅ Данные успешно выгружены в папку: {output_dir}")
     # 6. Визуализация
     plt.figure(figsize=(14, 6))
     plt.plot(activity['ts'], activity['requests'], label='Все запросы', color='blue', alpha=0.7)
