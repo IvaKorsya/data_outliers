@@ -5,6 +5,7 @@ import numpy as np
 from IPython.display import display
 import glob
 import os
+from datetime import datetime
 
 # Монтирование Google Drive
 drive.mount('/content/drive', force_remount=True)
@@ -122,6 +123,20 @@ def analyze_activity(df):
     # Вывод топ ботов
     print_top_bots(df)
 
+def save_results(df, folder_path):
+    """Сохранение результатов анализа"""
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    
+    # Сохранение данных по аномалиям (если есть)
+    anomalies = df[df['is_bot'] == True]  # Если мы хотим сохранить только аномалии
+    if not anomalies.empty:
+        anomalies.to_csv(f"{folder_path}/anomalies_{timestamp}.csv", index=False)
+        print(f"Аномалии сохранены в: {folder_path}/anomalies_{timestamp}.csv")
+
 # Основной процесс анализа
 try:
     print("Анализ активности и обнаружение ботов")
@@ -129,7 +144,15 @@ try:
     df = load_all_data(folder_path)
     df = detect_hidden_bots(df)
     analyze_activity(df)
+    
+    # Сохранение результатов в указанную папку
+    output_folder = os.path.join(os.path.dirname(folder_path), "anomaly_results")
+    save_results(df, output_folder)
 
+except Exception as e:
+    print(f"\nОшибка при анализе: {e}")
+finally:
+    print("\nАнализ завершен")
 except Exception as e:
     print(f"\nОшибка при анализе: {e}")
 finally:
