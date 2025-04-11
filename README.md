@@ -189,6 +189,36 @@ def load_and_process_file(file_path: str) -> None:
     # (Реализация загрузки, обработки и визуализации)
     pass
 ```
+# node_id_check.py
+```
+load_data(file_path) -> pd.DataFrame
+"""
+   Параметры:
+      file_path(str): Путь к parquet-файлу
+   Возвращает:
+      pd.DataFrame - загруженные данные
+"""
+analyze_missing_node_ids(data):
+"""
+   Анализирует строки с отсутствующим node_id.
+
+   Параметры:
+      data(pd.DataFrame): входные данные
+   Возвращает:
+      missing_data(pd.DataFrame): строки с проблемами
+      checked_columns (list): список проверенных столбцов
+"""
+def generate_reportdef generate_report(missing_data, columns_checked): -> None
+"""
+   Генерирует детальный отчет
+
+   Параметры:
+      missing_data (pd.DataFrame): Данные с проблемными строками
+      columns_checked (list): Список проверенных столбцов 
+"""
+def main() -> None
+"""
+```
 # Установка и использование
 ```
 # Клонирование репозитория
