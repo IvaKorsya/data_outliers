@@ -208,7 +208,7 @@ analyze_missing_node_ids(data):
       missing_data(pd.DataFrame): строки с проблемами
       checked_columns (list): список проверенных столбцов
 """
-def generate_reportdef generate_report(missing_data, columns_checked): -> None
+def generate_report(missing_data, columns_checked): -> None
 """
    Генерирует детальный отчет
 
