@@ -1,4 +1,3 @@
-# report_generator.py
 import pandas as pd
 import matplotlib.pyplot as plt
 from IPython.display import display, HTML
@@ -70,7 +69,7 @@ class ReportGenerator:
             <h2>Results</h2>
             <ul>
                 <li>Successful: {', '.join(summary['successful_detectors'])}</li>
-                <li>Failed: {len(summary['failed_detectors']}</li>
+                <li>Failed: {len(summary['failed_detectors'])}</li>
             </ul>
             <h2>Metrics</h2>
             <pre>{json.dumps(summary['summary_metrics'], indent=2)}</pre>
