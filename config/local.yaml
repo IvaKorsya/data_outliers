@@ -39,3 +39,4 @@ detectors:
     enabled: true
     resolution: '15min'
     threshold: 2.0
+    schedule_file: "/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv"
