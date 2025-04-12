@@ -153,7 +153,3 @@ except Exception as e:
     print(f"\nОшибка при анализе: {e}")
 finally:
     print("\nАнализ завершен")
-except Exception as e:
-    print(f"\nОшибка при анализе: {e}")
-finally:
-    print("\nАнализ завершен")
