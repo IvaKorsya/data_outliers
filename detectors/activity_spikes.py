@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 import os
 from pathlib import Path
-from core.base_detector import BaseAnomalyDetector
+from ..core.BaseAnomalyDetector import BaseAnomalyDetector
 
 class ActivitySpikesDetector(BaseAnomalyDetector):
     def __init__(self, config=None):
@@ -85,5 +85,3 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         plt.legend()
         plt.xticks(rotation=45)
         plt.grid()
-# Запуск анализа
-analyze_data(dataset_path, schedule_file)
