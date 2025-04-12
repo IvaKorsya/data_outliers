@@ -72,7 +72,7 @@ def load_all_data(folder_path):
         raise ValueError("Не удалось загрузить ни одного файла")
     return pd.concat(dfs, ignore_index=True)
 
-def extended_analysis(df):
+def extended_analysis(df, folder_path):
     """Расширенный анализ данных"""
     print("\n" + "="*50)
     print("Расширенный анализ данных")
@@ -136,7 +136,7 @@ def extended_analysis(df):
     plt.tight_layout()
     plt.show()
 
-def analyze_night_activity(df):
+def analyze_night_activity(df, folder_path):
     """Анализ ночной активности (00:00-07:00)"""
     print("\n" + "="*50)
     print("Анализ ночной активности (00:00 - 07:00)")
@@ -176,9 +176,9 @@ def analyze_night_activity(df):
     plt.show()
     
     # Анализ аномалий
-    analyze_anomalies(night_data, "ночной период (00:00-07:00)")
+    analyze_anomalies(night_data, "ночной период (00:00-07:00)", folder_path)
 
-def analyze_specific_hour(df, target_date, target_hour):
+def analyze_specific_hour(df, target_date, target_hour, folder_path):
     """Анализ конкретного часа в конкретную дату"""
     print("\n" + "="*50)
     print(f"Анализ активности {target_date} в {target_hour}:00")
@@ -214,10 +214,38 @@ def analyze_specific_hour(df, target_date, target_hour):
     plt.show()
     
     # Анализ аномалий
-    analyze_anomalies(hour_data, f"{target_date} {target_hour}:00")
+    analyze_anomalies(hour_data, f"{target_date} {target_hour}:00", folder_path)
 
-def analyze_anomalies(data, period_name):
+def save_anomaly_details(full_data, anomalies, period_name, folder_path):
+    """Сохранение деталей аномалий (только ключевые столбцы)"""
+    # Определяем IP с аномалиями
+    anomaly_ips = anomalies['ip'].unique()
+    
+    # Фильтруем исходные данные по этим IP
+    anomaly_data = full_data[full_data['ip'].isin(anomaly_ips)]
+    
+    # Выбираем только нужные столбцы
+    columns_to_save = ['ts', 'ip', 'is_bot', 'hour', 'minute']
+    if 'ua_header' in full_data.columns:
+        columns_to_save.append('ua_header')
+    
+    # Создаем папку для результатов, если ее нет
+    output_folder = os.path.join(os.path.dirname(folder_path), "anomaly_results")
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    
+    # Генерируем имя файла
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_period_name = period_name.replace(" ", "_").replace(":", "").replace("-", "")
+    filename = f"{output_folder}/anomalies_{safe_period_name}_{timestamp}.csv"
+    
+    # Сохраняем только нужные столбцы
+    anomaly_data[columns_to_save].to_csv(filename, index=False)
+    print(f"\nДанные аномалий сохранены в: {filename}")
+
+def analyze_anomalies(data, period_name, folder_path):
     """Обнаружение аномальной активности"""
+    # Группировка данных для выявления аномалий
     anomalies = data.groupby(['ip', 'is_bot']).size().reset_index(name='requests')
     anomalies = anomalies[anomalies['requests'] > 100]
     
@@ -230,6 +258,9 @@ def analyze_anomalies(data, period_name):
             avg_requests=('requests', 'mean'),
             max_requests=('requests', 'max')
         ))
+        
+        # Сохраняем только ключевые столбцы аномалий
+        save_anomaly_details(data, anomalies, period_name, folder_path)
     else:
         print(f"\nАномалий не обнаружено в {period_name}")
 
@@ -246,17 +277,22 @@ def main():
         df = load_all_data(folder_path)
         
         # 1. Расширенный анализ
-        extended_analysis(df)
+        extended_analysis(df, folder_path)
         
         # 2. Анализ ночной активности
-        analyze_night_activity(df)
+        analyze_night_activity(df, folder_path)
         
         # 3. Анализ конкретного часа (если указан)
         if target_date is not None and target_hour is not None:
-            analyze_specific_hour(df, str(target_date), target_hour)
+            analyze_specific_hour(df, str(target_date), target_hour, folder_path)
         
     except Exception as e:
         print(f"\nОшибка при анализе: {e}")
+    finally:
+        print("\nАнализ завершен")
+
+if __name__ == "__main__":
+    main()
     finally:
         print("\nАнализ завершен")
 
