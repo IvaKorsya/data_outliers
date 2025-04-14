@@ -33,7 +33,54 @@ python main.py \
   - data_loader загружает данные в зависимости от потребностей пользователя и рассчитан на даты в имени файлов\
   - генератор отчётов делает всё точно соответствуя своему названию
   - оркестратор анализа runner.py запускает параллельный анализ, все методы
-    
+# Что делать?
+
+a) Стандартизация детекторов
+
+Все детекторы должны быть переписаны по шаблону:
+
+```
+from core.base_detector import BaseAnomalyDetector
+import pandas as pd
+
+class MyDetector(BaseAnomalyDetector):
+    def __init__(self, config=None):
+        super().__init__(config)
+        # Инициализация параметров из config
+        
+    def detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        # Логика обнаружения аномалий
+        self.results = processed_data
+        return self.results
+        
+    def generate_report(self) -> dict:
+        return {
+            "summary": "Report summary",
+            "metrics": {...},
+            "tables": {...},
+            "plots": {...}
+        }
+ ```
+b)Исправление runner.py
+
+Основные исправления:
+
+Удалить дублирование кода
+
+Добавить проверку интерфейса детекторов
+
+Использовать конфигурацию из ConfigManager
+
+c) Обновление зависимостей
+
+Дополнить requirements.txt:
+```
+scipy>=1.10.0
+pyyaml>=6.0
+```
+d) Удаление Colab-зависимостей
+Заменить все вызовы drive.mount() на работу с локальными путями из конфига.
+
  # Примерный вид структуры фрейма
 
 anomaly_detection_framework/
