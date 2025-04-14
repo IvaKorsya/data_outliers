@@ -94,20 +94,20 @@ anomaly_detection_framework/
 │   └── production.yaml             # Продакшен-конфиг
 │
 ├── core/                           # Ядро системы
+    ├── detectors/              
+│      ├── __init__.py
+│      ├── activity_spikes.py          # Анализ всплесков активности
+│      ├── isolation_forest.py         # Isolation Forest
+│      ├── night_activity.py           # Ночная активность
+│      ├── node_id_check.py            # Проверка node_id
+│      ├── page_view.py                # Аномалии просмотров
+│      └── untagged_bots.py            # Неотмеченные боты
+│
 │   ├── base_detector.py            # Базовый класс детектора
 │   ├── config_manager.py           # Загрузка конфигов
 │   ├── data_loader.py              # Умный загрузчик данных
 │   ├── report_generator.py         # Генерация отчетов
 │   └── runner.py                   # Оркестратор анализа
-│
-├── detectors/              
-│   ├── __init__.py
-│   ├── activity_spikes.py          # Анализ всплесков активности
-│   ├── isolation_forest.py         # Isolation Forest
-│   ├── night_activity.py           # Ночная активность
-│   ├── node_id_check.py            # Проверка node_id
-│   ├── page_view.py                # Аномалии просмотров
-│   └── untagged_bots.py            # Неотмеченные боты
 │
 ├── outputs/                        # Автосохранение результатов
 │   ├── reports/                    # Готовые отчеты
