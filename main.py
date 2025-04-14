@@ -31,7 +31,7 @@ def setup_framework(config_path: str) -> AnalysisRunner:
         'night_activity': NightActivityDetector,
         'node_id': NodeIdChecker,
         'page_view': PageViewAnomalyDetector,
-        'untagged_bots': UntaggedBotsDetector
+        'untagged_bots': UntaggedBotsDetector,
         'test_detector': TestDetector
     }
     
