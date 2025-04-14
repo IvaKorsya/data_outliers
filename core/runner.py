@@ -1,4 +1,5 @@
-
+from core.data_loader import DataLoader
+from core.report_generator import ReportGenerator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 import pandas as pd
