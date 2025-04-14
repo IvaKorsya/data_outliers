@@ -15,7 +15,8 @@ from detectors import (
     NightActivityDetector,
     NodeIdChecker,
     PageViewAnomalyDetector,
-    UntaggedBotsDetector
+    UntaggedBotsDetector,
+    TestDetector 
 )
 
 def setup_framework(config_path: str) -> AnalysisRunner:
@@ -31,6 +32,7 @@ def setup_framework(config_path: str) -> AnalysisRunner:
         'node_id': NodeIdChecker,
         'page_view': PageViewAnomalyDetector,
         'untagged_bots': UntaggedBotsDetector
+        'test_detector': TestDetector
     }
     
     for name, detector in detectors.items():
