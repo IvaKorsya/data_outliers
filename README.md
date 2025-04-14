@@ -88,12 +88,12 @@ anomaly_detection_framework/
 ```│
 anomaly_detection_framework/
 │
-├── configs/                        # Конфигурации для всех сред
-│   ├── default.yaml                  # Настройки для Google Colab
-│   ├── local.yaml                  # Локальные настройки
-│   └── production.yaml             # Продакшен-конфиг
 │
 ├── core/                           # Ядро системы
+    ├── configs/                        # Конфигурации для всех сред
+│      ├── default.yaml                # Настройки для Google Colab
+│      ├── local.yaml                  # Локальные настройки
+│      └── production.yaml             # Продакшен-конфиг
     ├── detectors/              
 │      ├── __init__.py
 │      ├── activity_spikes.py          # Анализ всплесков активности
