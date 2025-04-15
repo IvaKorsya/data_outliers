@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 class TestDetector(BaseAnomalyDetector):
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        print(f"\nTest Detector received data shape: {data.shape}")  
         """Просто возвращаем первые 10 строк для теста"""
         self.results = data.head(10)
         return self.results
