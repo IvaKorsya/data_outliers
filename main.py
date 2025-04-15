@@ -42,20 +42,18 @@ def load_detectors(detectors_dir: Path) -> Dict[str, type]:
     return detectors
 
 def setup_framework(config_path: str) -> AnalysisRunner:
-    """Инициализация фреймворка с динамической загрузкой детекторов"""
     config = ConfigManager(config_path).config
     runner = AnalysisRunner(config)
     
-    # Динамическая загрузка детекторов
-    detectors_dir = Path(__file__).parent / 'core' / 'detectors'
-    detectors = load_detectors(detectors_dir)
+    # Временный список только с тестовым детектором
+    detectors = {
+        'test_detector': TestDetector
+    }
     
-    # Регистрация всех обнаруженных детекторов
     for name, detector in detectors.items():
         runner.register_detector(name, detector)
     
     return runner
-
 def parse_args():
     """Парсинг аргументов командной строки с улучшенной валидацией"""
     parser = argparse.ArgumentParser(
