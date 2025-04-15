@@ -5,14 +5,21 @@ import matplotlib.pyplot as plt
 
 class TestDetector(BaseAnomalyDetector):
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Пример реализации без analyze_data"""
+        """Просто возвращаем первые 10 строк для теста"""
         self.results = data.head(10)
         return self.results
         
     def generate_report(self) -> dict:
         return {
-            "summary": "Test report",
-            "metrics": {"samples": len(self.results)},
-            "tables": {"test_data": self.results},
-            "plots": {"test_plot": lambda: plt.plot(self.results.iloc[:, 0])}
+            "summary": "Test report - first 10 rows",
+            "metrics": {
+                "sample_size": len(self.results),
+                "columns": list(self.results.columns)
+            },
+            "tables": {
+                "sample_data": self.results
+            },
+            "plots": {
+                "sample_plot": lambda: self.results.plot()
+            }
         }
