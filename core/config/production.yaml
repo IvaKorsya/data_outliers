@@ -43,3 +43,7 @@ detectors:
     threshold: 3.5
     min_duration: '5min'
     schedule_file: "/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv"
+plot_style: "ggplot"
+figure_size: [12, 6]
+font_size: 12
+title_size: 14
