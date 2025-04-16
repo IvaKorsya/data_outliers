@@ -42,13 +42,13 @@ def load_detectors(detectors_dir: Path) -> Dict[str, type]:
     
     return detectors
 
+
 def setup_framework(config_path: str) -> AnalysisRunner:
     config = ConfigManager(config_path).config
     runner = AnalysisRunner(config)
     
-    # Временный список только с тестовым детектором
     detectors = {
-        'test_detector': TestDetector
+        'activity_spikes': ActivitySpikesDetector
     }
     
     for name, detector in detectors.items():
