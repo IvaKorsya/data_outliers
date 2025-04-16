@@ -35,12 +35,12 @@ detectors:
       - url
       - node_id
 
- activity_spikes:
-    enabled: true
-    time_resolution: "5min"  
-    window_size: 15         
-    top_n: 20               
-    schedule_file: "data/tv_schedule.csv"  
+activity_spikes:
+   enabled: true
+   time_resolution: "5min"
+   window_size: 15
+   top_n: 20
+   schedule_file: "data/tv_schedule.csv"
 
 plot_style: "ggplot"
 figure_size: [12, 6]
