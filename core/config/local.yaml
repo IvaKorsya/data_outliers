@@ -35,11 +35,13 @@ detectors:
       - url
       - node_id
 
-  activity_spikes:
+ activity_spikes:
     enabled: true
-    resolution: '15min'
-    threshold: 2.0
-    schedule_file: "/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv"
+    time_resolution: "5min"  
+    window_size: 15         
+    top_n: 20               
+    schedule_file: "data/tv_schedule.csv"  
+
 plot_style: "ggplot"
 figure_size: [12, 6]
 font_size: 12
