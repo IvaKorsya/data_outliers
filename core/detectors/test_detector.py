@@ -2,25 +2,28 @@
 from core.base_detector import BaseAnomalyDetector
 import pandas as pd
 import matplotlib.pyplot as plt
+import json
+import logging
 
 class TestDetector(BaseAnomalyDetector):
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        print(f"\nTest Detector received data shape: {data.shape}")  
-        """Просто возвращаем первые 10 строк для теста"""
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.debug(f"Received data shape: {data.shape}")
         self.results = data.head(10)
         return self.results
         
     def generate_report(self) -> dict:
-        return {
-            "summary": "Test report - first 10 rows",
+        report = {
+            "summary": f"Test report - first {len(self.results)} rows",
             "metrics": {
                 "sample_size": len(self.results),
                 "columns": list(self.results.columns)
             },
             "tables": {
                 "sample_data": self.results
-            },
-            "plots": {
-                "sample_plot": lambda: self.results.plot()
+            }
+        }
+        self.logger.debug(f"Generated report: {report['summary']}")
+        return report
             }
         }
