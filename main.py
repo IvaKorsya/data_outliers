@@ -9,7 +9,6 @@ import sys
 from core.config_manager import ConfigManager
 from core.runner import AnalysisRunner
 from core.report_generator import ReportGenerator
-from core.detectors.test_detector import TestDetector 
 
 # Настройка логгера
 logging.basicConfig(
