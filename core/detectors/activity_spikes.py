@@ -21,19 +21,19 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
             data = self._filter_data(data, {'event': 'page_view'})
             data['ts'] = pd.to_datetime(data['ts'])
             
-            # Агрегация активности
-            activity = data.groupby(data['ts'].dt.floor(self.time_resolution)).size()
-            activity = activity.reset_index(name='requests')
+            # Агрегация активности по временным интервалам
+            activity = data.groupby(data['ts'].dt.floor(self.time_resolution))['requests'].sum()
+            activity = activity.reset_index(name='total_requests')
             
             # Поиск пиков
             peaks_idx = argrelextrema(
-                activity['requests'].values, 
+                activity['total_requests'].values, 
                 np.greater, 
                 order=self.window_size
             )[0]
             
             activity['is_peak'] = activity.index.isin(peaks_idx)
-            self.peaks = activity[activity['is_peak']].nlargest(self.top_n, 'requests')
+            self.peaks = activity[activity['is_peak']].nlargest(self.top_n, 'total_requests')
             
             if self.schedule_file:
                 self._match_with_schedule()
@@ -56,8 +56,7 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
                 lambda x: schedule_df[
                     (schedule_df['start_ts'] <= x) & 
                     (schedule_df['end_ts'] >= x)
-                ][['title', 'event_type', 'channel_id']].to_dict('records')
-            )
+                ][['title', 'event_type', 'channel_id']].to_dict('records'))
         except Exception as e:
             self.logger.warning(f"Schedule matching failed: {str(e)}")
 
@@ -70,17 +69,21 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
                 "tables": {},
                 "plots": {}
             }
-            
+        
+        # Конвертируем numpy типы в нативные Python типы
+        peaks_df = self.peaks.copy()
+        peaks_df['total_requests'] = peaks_df['total_requests'].astype(int)
+        
         return {
-            "summary": f"Found {len(self.peaks)} activity spikes (min: {self.peaks['requests'].min()}, max: {self.peaks['requests'].max()})",
+            "summary": f"Found {len(self.peaks)} activity spikes (min: {int(self.peaks['total_requests'].min())}, max: {int(self.peaks['total_requests'].max())})",
             "metrics": {
-                "total_spikes": len(self.peaks),
-                "max_requests": self.peaks['requests'].max(),
-                "min_requests": self.peaks['requests'].min(),
-                "avg_requests": self.peaks['requests'].mean()
+                "total_spikes": int(len(self.peaks)),
+                "max_requests": int(self.peaks['total_requests'].max()),
+                "min_requests": int(self.peaks['total_requests'].min()),
+                "avg_requests": float(self.peaks['total_requests'].mean())
             },
             "tables": {
-                "peaks_data": self.peaks,
+                "peaks_data": peaks_df,
                 "full_activity": self.results
             },
             "plots": {
@@ -91,9 +94,9 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
     def _plot_activity(self):
         """Генерация графика активности"""
         plt.figure(figsize=self.plot_config["figure.figsize"])
-        plt.plot(self.results['ts'], self.results['requests'], 
+        plt.plot(self.results['ts'], self.results['total_requests'], 
                label='Requests', color='blue', alpha=0.7)
-        plt.scatter(self.peaks['ts'], self.peaks['requests'], 
+        plt.scatter(self.peaks['ts'], self.peaks['total_requests'], 
                   color='red', label='Spikes', zorder=3)
         plt.title('Activity Spikes Detection')
         plt.xlabel('Time')
