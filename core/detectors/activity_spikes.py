@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy.signal import argrelextrema
 import logging
+import matplotlib.pyplot as plt
 
 class ActivitySpikesDetector(BaseAnomalyDetector):
     def __init__(self, config=None):
@@ -56,6 +57,7 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
                     (schedule_df['start_ts'] <= x) & 
                     (schedule_df['end_ts'] >= x)
                 ][['title', 'event_type', 'channel_id']].to_dict('records')
+            )
         except Exception as e:
             self.logger.warning(f"Schedule matching failed: {str(e)}")
 
@@ -96,8 +98,6 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         plt.title('Activity Spikes Detection')
         plt.xlabel('Time')
         plt.ylabel('Requests count')
-        plt.legend()
-        plt.grid(True)
         plt.legend()
         plt.grid(True)
         plt.xticks(rotation=45)
