@@ -2,6 +2,19 @@
 
 Эта ветка существует чисто под тестирование фрейма, все методы-скрипты будут храниться в main, фрейм в разработке.
 
+Тестирование производится командами:
+```
+python main.py \
+  --config core/config/local.yaml \
+  --data-path data/test_activity.parquet \
+  --detectors activity_spikes \
+  --output-format html \
+  --log-level DEBUG
+```
+Создание тестовых данных для проверки работы метода/методов(ещё не решил) осуществляется командой:
+```
+python test_data.py
+```
 
 # НЕ ПЫТАТЬСЯ СОВСМЕСТИТЬ C MAIN
 
