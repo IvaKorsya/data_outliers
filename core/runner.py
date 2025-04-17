@@ -1,12 +1,13 @@
 import json
+import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 import pandas as pd
 import os
-from .data_loader import DataLoader  # Добавьте этот импорт
-from .report_generator import ReportGenerator  # И этот тоже
+from core.data_loader import DataLoader
+from core.report_generator import ReportGenerator
 
 class AnalysisRunner:
     def __init__(self, config: Dict = None):
@@ -56,24 +57,30 @@ class AnalysisRunner:
         return results
     
     def _run_single_detector(self, name: str, data: pd.DataFrame) -> Dict:
-        """Исправленный метод без undefined detector"""
         detector_instance = self.detectors[name](self.config.get('detectors', {}).get(name, {}))
         detector_instance.detect(data)
         return detector_instance.generate_report()
     
     def _save_detector_output(self, name: str, report: Dict, output_dir: str):
+        """Сохранение результатов детектора"""
         detector_dir = Path(output_dir) / name
         detector_dir.mkdir(parents=True, exist_ok=True)
         
         if 'error' in report:
             return
             
+        # Сохранение JSON с обработкой numpy типов
         with open(detector_dir / 'report.json', 'w') as f:
             json.dump({
                 'summary': report.get('summary'),
-                'metrics': report.get('metrics', {})
+                'metrics': {
+                    k: int(v) if isinstance(v, (np.integer, int)) else 
+                       float(v) if isinstance(v, (np.floating, float)) else v
+                    for k, v in report.get('metrics', {}).items()
+                }
             }, f, indent=2)
         
+        # Сохранение таблиц
         if 'tables' in report:
             tables_dir = detector_dir / 'tables'
             tables_dir.mkdir(exist_ok=True)
@@ -81,6 +88,7 @@ class AnalysisRunner:
                 if isinstance(df, pd.DataFrame):
                     df.to_csv(tables_dir / f'{table_name}.csv', index=False)
         
+        # Сохранение графиков
         if 'plots' in report:
             plots_dir = detector_dir / 'plots'
             plots_dir.mkdir(exist_ok=True)
