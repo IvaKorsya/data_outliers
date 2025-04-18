@@ -29,11 +29,10 @@ detectors:
     n_estimators: 50
     features: ['requests', 'unique_ips']
     
-  node_id_check:
-    enabled: false
-    required_columns:
-      - url
-      - node_id
+node_id_check:
+    enabled: true
+    required_columns: ['url', 'node_id', 'content_type']
+    validate_hourly: true
 
 activity_spikes:
     enabled: true
