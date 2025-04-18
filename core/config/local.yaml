@@ -3,10 +3,11 @@ data_loader:
   google_colab: false
   input_path: './data'
   output_path: './output'
-  file_pattern: 'sample_*.parquet'
+  file_pattern: '*.parquet'
   date_format: '%Y-%m-%d'
   max_workers: 2
   chunk_size: 5000
+  timestamp_column: 'ts'
 
 reporting:
   default_format: 'console'
@@ -33,6 +34,7 @@ node_id_check:
     enabled: true
     required_columns: ['url', 'node_id', 'content_type']
     validate_hourly: true
+    time_column: 'ts'
 
 activity_spikes:
     enabled: true
@@ -40,6 +42,7 @@ activity_spikes:
     window_size: 5           # Более чувствительный детектор
     top_n: 50                # Больше аномалий
     schedule_file: "data/tv_schedule.csv"
+    time_column: 'ts'
 
 plot_style: "ggplot"
 figure_size: [12, 6]

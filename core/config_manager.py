@@ -1,35 +1,22 @@
+# core/config_manager.py
 import yaml
 from pathlib import Path
+import logging
 
 class ConfigManager:
     _instance = None
     
-    def __init__(self, config_path='configs/default.yaml'):
-        self.config = self._load_config(config_path)
-        self._init_colab()
+    def __init__(self, config_path='local.yaml'):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.config_dir = Path(__file__).parent.parent / 'core' / 'config'
+        self.config_file = self.config_dir / config_path
+        self.logger.info(f"Loading config from: {self.config_file}")
+        self.config = self._load_config()
     
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
-    
-    def _load_config(self, path):
+    def _load_config(self):
         try:
-            with open(Path(__file__).parent.parent / path) as f:
+            with open(self.config_file) as f:
                 return yaml.safe_load(f)
         except Exception as e:
-            print(f"Error loading config: {e}")
+            self.logger.error(f"Config loading failed: {str(e)}")
             return {}
-    
-    def _init_colab(self):
-        if self.config.get('data_loader', {}).get('google_colab', False):
-            try:
-                from google.colab import drive
-                drive.mount('/content/drive')
-                print("Google Drive mounted successfully")
-            except:
-                print("Google Colab not detected, running in local mode")
-    
-    def get_detector_config(self, detector_name):
-        return self.config.get('detectors', {}).get(detector_name, {})
