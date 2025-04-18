@@ -3,5 +3,8 @@ from core.report_generator import ReportGenerator
 from core.runner import AnalysisRunner
 __all__ = ['DataLoader', 'ReportGenerator', 'AnalysisRunner']
 from .activity_spikes import ActivitySpikesDetector
-__all__ = ['ActivitySpikesDetector']
+from .node_id_check import NodeIdCheckDetector
+__all__ = ['ActivitySpikesDetector',
+          'NodeIdCheckDetector'
+          ]
 
