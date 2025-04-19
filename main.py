@@ -11,6 +11,8 @@ from core.runner import AnalysisRunner
 from core.report_generator import ReportGenerator
 from core.detectors.activity_spikes import ActivitySpikesDetector
 from core.detectors.node_id_check import NodeIdCheckDetector
+from core.detectors.page_view import PageViewOrderDetector
+
 # Настройка логгера
 logging.basicConfig(
     level=logging.INFO,
@@ -49,7 +51,8 @@ def setup_framework(config_path: str) -> AnalysisRunner:
     
     detectors = {
         'activity_spikes': ActivitySpikesDetector,
-        'node_id_check': NodeIdCheckDetector
+        'node_id_check': NodeIdCheckDetector,
+        'page_view': PageViewOrderDetector
     }
     
     for name, detector in detectors.items():
