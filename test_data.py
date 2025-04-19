@@ -79,6 +79,35 @@ final_df['ts'] = final_df['ts']  # или final_df['ts_node'], если нужн
 final_df.drop(['ts_node'], axis=1, inplace=True, errors='ignore')
 
 final_df.to_parquet('data/test_activity.parquet')
+# ===== Page View Order Test Data =====
+session_ids = [f"session_{i}" for i in range(100)]
+user_ids = [f"user_{i}" for i in range(30)]
+
+pageview_data = []
+for session in session_ids:
+    uid = np.random.choice(user_ids)
+    length = np.random.randint(5, 15)
+    numbers = list(range(1, length + 1))
+
+    # Внедрение аномалий
+    if np.random.rand() < 0.2:
+        anomaly_type = np.random.choice(["reset", "skip"])
+        if anomaly_type == "reset" and len(numbers) > 3:
+            numbers[3] = 1
+        elif anomaly_type == "skip" and len(numbers) > 3:
+            numbers[2] += 2
+
+    for i, val in enumerate(numbers):
+        pageview_data.append({
+            "randPAS_user_agent_id": uid,
+            "randPAS_session_id": session,
+            "page_view_order_number": val,
+            "ua_is_bot": 0
+        })
+
+pageview_df = pd.DataFrame(pageview_data)
+final_df = pd.concat([final_df, pageview_df], ignore_index=True)
+final_df.to_parquet('data/test_activity.parquet')
 # Тестовое расписание
 schedule = pd.DataFrame({
     'start_ts': [start_date + timedelta(hours=i) for i in range(24)],

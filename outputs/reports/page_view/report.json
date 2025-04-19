@@ -1,0 +1,8 @@
+{
+  "summary": "Found 39 anomalies across sessions.",
+  "metrics": {
+    "total_anomalies": 39,
+    "skip": 30,
+    "reset": 9
+  }
+}

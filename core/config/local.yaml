@@ -43,6 +43,10 @@ activity_spikes:
     top_n: 50                # Больше аномалий
     schedule_file: "data/tv_schedule.csv"
     time_column: 'ts'
+page_view:
+  enabled: true
+  user_id_column: randPAS_user_agent_id
+  session_id_column: randPAS_session_id
 
 plot_style: "ggplot"
 figure_size: [12, 6]
