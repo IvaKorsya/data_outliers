@@ -1,9 +1,9 @@
 {
-  "summary": "Found 10 activity spikes (min: 273, max: 2448)",
+  "summary": "Found 10 activity spikes (min: 261, max: 3200)",
   "metrics": {
     "total_spikes": 10,
-    "max_requests": 2448,
-    "min_requests": 273,
-    "avg_requests": 858.7
+    "max_requests": 3200,
+    "min_requests": 261,
+    "avg_requests": 753.4
   }
 }

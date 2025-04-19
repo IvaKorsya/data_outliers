@@ -3,25 +3,30 @@
         <head><title>Anomaly Detection Report</title></head>
         <body>
             <h1>Anomaly Detection Summary</h1>
-            <p>Detectors run: 2</p>
+            <p>Detectors run: 3</p>
             <h2>Results</h2>
             <ul>
-                <li>Successful: activity_spikes, node_id_check</li>
+                <li>Successful: activity_spikes, node_id_check, page_view</li>
                 <li>Failed: 0</li>
             </ul>
             <h2>Metrics</h2>
             <pre>{
   "activity_spikes": {
     "total_spikes": 10,
-    "max_requests": 2448,
-    "min_requests": 273,
-    "avg_requests": 858.7
+    "max_requests": 3200,
+    "min_requests": 261,
+    "avg_requests": 753.4
   },
   "node_id_check": {
     "total_urls": 20,
-    "conflict_urls": 2,
-    "conflict_rate": "10.0%",
-    "peak_conflict_hour": 0
+    "conflict_urls": 4,
+    "conflict_rate": "20.0%",
+    "peak_conflict_hour": 0.0
+  },
+  "page_view": {
+    "total_anomalies": 39,
+    "skip": 30,
+    "reset": 9
   }
 }</pre>
         </body>
