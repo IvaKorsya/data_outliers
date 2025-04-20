@@ -145,13 +145,13 @@ detectors = {
 
 3. Для каждого детектора:
 
-  3.1 вызывается detect()
+    3.1 вызывается detect()
 
-  3.2 затем generate_report()
+    3.2 затем generate_report()
 
-  3.3 сохраняется в outputs/reports/<название_детектора>/
+    3.3 сохраняется в outputs/reports/<название_детектора>/
 
-4.report_generator.py собирает финальный summary_report.html или .json
+ 4. report_generator.py собирает финальный summary_report.html или .json
 
 #  Пример финального отчёта:
 
