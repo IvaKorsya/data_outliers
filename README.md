@@ -2,7 +2,7 @@
 
 Эта ветка существует чисто под тестирование фрейма, все методы-скрипты будут храниться в main, фрейм в разработке.
 
-# Уже интегрированы четыре метода: activity_spikes, node_id_check, page_view, untagged_bots
+# Уже интегрированы пять методов: activity_spikes, node_id_check, page_view, untagged_bots, isolation_forest
 
 # Как запустить анализ?
 
