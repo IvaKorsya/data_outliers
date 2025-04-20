@@ -12,6 +12,7 @@ from core.report_generator import ReportGenerator
 from core.detectors.activity_spikes import ActivitySpikesDetector
 from core.detectors.node_id_check import NodeIdCheckDetector
 from core.detectors.page_view import PageViewOrderDetector
+from core.detectors.untagged_bots import UntaggedBotsDetector
 
 # Настройка логгера
 logging.basicConfig(
@@ -52,7 +53,8 @@ def setup_framework(config_path: str) -> AnalysisRunner:
     detectors = {
         'activity_spikes': ActivitySpikesDetector,
         'node_id_check': NodeIdCheckDetector,
-        'page_view': PageViewOrderDetector
+        'page_view': PageViewOrderDetector,
+        'untagged_bots': UntaggedBotsDetector
     }
     
     for name, detector in detectors.items():

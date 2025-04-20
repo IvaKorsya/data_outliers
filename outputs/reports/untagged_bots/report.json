@@ -1,0 +1,12 @@
+{
+  "summary": "Detected 750 bots (31.4%), 750 hidden (31.4%), 750 Googlebot-like (31.4%)",
+  "metrics": {
+    "total_requests": 2390,
+    "total_bots": 750,
+    "hidden_bots": 750,
+    "googlebot_like_count": 750,
+    "bot_ratio": "31.4%",
+    "hidden_bot_ratio": "31.4%",
+    "googlebot_like_ratio": "31.4%"
+  }
+}

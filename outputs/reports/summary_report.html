@@ -3,30 +3,22 @@
         <head><title>Anomaly Detection Report</title></head>
         <body>
             <h1>Anomaly Detection Summary</h1>
-            <p>Detectors run: 3</p>
+            <p>Detectors run: 1</p>
             <h2>Results</h2>
             <ul>
-                <li>Successful: activity_spikes, node_id_check, page_view</li>
+                <li>Successful: untagged_bots</li>
                 <li>Failed: 0</li>
             </ul>
             <h2>Metrics</h2>
             <pre>{
-  "activity_spikes": {
-    "total_spikes": 10,
-    "max_requests": 3200,
-    "min_requests": 261,
-    "avg_requests": 753.4
-  },
-  "node_id_check": {
-    "total_urls": 20,
-    "conflict_urls": 4,
-    "conflict_rate": "20.0%",
-    "peak_conflict_hour": 0.0
-  },
-  "page_view": {
-    "total_anomalies": 39,
-    "skip": 30,
-    "reset": 9
+  "untagged_bots": {
+    "total_requests": 2390,
+    "total_bots": 750,
+    "hidden_bots": 750,
+    "googlebot_like_count": 750,
+    "bot_ratio": "31.4%",
+    "hidden_bot_ratio": "31.4%",
+    "googlebot_like_ratio": "31.4%"
   }
 }</pre>
         </body>

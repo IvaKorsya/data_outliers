@@ -47,6 +47,9 @@ page_view:
   enabled: true
   user_id_column: randPAS_user_agent_id
   session_id_column: randPAS_session_id
+untagged_bots:
+  enabled: true
+  top_n: 10
 
 plot_style: "ggplot"
 figure_size: [12, 6]
