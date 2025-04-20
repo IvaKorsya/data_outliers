@@ -1,136 +1,122 @@
-from google.colab import drive
+from core.base_detector import BaseAnomalyDetector
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from IPython.display import display
-import glob
-import os
 
-# Монтирование Google Drive
-drive.mount('/content/drive', force_remount=True)
+class UntaggedBotsDetector(BaseAnomalyDetector):
+    def __init__(self, config=None):
+        super().__init__(config)
+        self.top_n = self.config.get("top_n", 10)
 
-def get_user_path():
-    """Запрашивает путь у пользователя с проверкой существования"""
-    while True:
-        path = input("Введите путь к папке с данными (например: /content/drive/MyDrive/dataset): ").strip()
-        if os.path.exists(path):
-            return path
-        print(f"Ошибка: путь '{path}' не существует. Попробуйте снова.")
-
-def load_all_data(folder_path):
-    """Загрузка всех файлов данных с безопасной обработкой"""
-    all_files = sorted(glob.glob(f"{folder_path}/data_2024-10-*.parquet"))
-    if not all_files:
-        all_files = sorted(glob.glob(f"{folder_path}/*.parquet"))  # Альтернативный вариант поиска
-    
-    dfs = []
-    
-    for file in all_files:
+    def detect(self, data: pd.DataFrame) -> pd.DataFrame:
         try:
-            df = pd.read_parquet(file)
-            # Обязательные преобразования
-            df['ts'] = pd.to_datetime(df['ts'])
-            df['date'] = df['ts'].dt.date
-            df['hour'] = df['ts'].dt.hour
-            
-            # Определение ботов (включая скрытых)
-            if 'ua_is_bot' in df.columns:
-                df['is_bot'] = np.where(pd.to_numeric(df['ua_is_bot'], errors='coerce') > 0, True, False)
+            data = data.copy()
+
+            data["ts"] = pd.to_datetime(data["ts"])
+            data["date"] = data["ts"].dt.date
+            data["hour"] = data["ts"].dt.hour
+
+            if "ua_is_bot" in data.columns:
+                data["is_bot"] = pd.to_numeric(data["ua_is_bot"], errors="coerce").fillna(0) > 0
             else:
-                df['is_bot'] = False
-                
-            dfs.append(df)
-            print(f"Успешно загружен: {file.split('/')[-1]}")
+                data["is_bot"] = False
+
+            ip_counts = data["ip"].value_counts().rename("request_count")
+            data = data.merge(ip_counts.to_frame(), left_on="ip", right_index=True)
+
+            # Подозрительные User-Agent
+            if "ua_header" in data.columns:
+                data["suspicious_ua"] = data["ua_header"].str.contains(
+                    "bot|spider|crawl", case=False, na=False
+                )
+                data["is_googlebot_like"] = data["ua_header"].str.contains("googlebot", case=False, na=False)
+            else:
+                data["suspicious_ua"] = False
+                data["is_googlebot_like"] = False
+
+            # Логика скрытого бота
+            data["is_hidden_bot"] = (data["is_bot"] == False) & (
+                (data["request_count"] > 100) | data["suspicious_ua"]
+            )
+
+            # Финальное объединение
+            data["is_bot"] = data["is_bot"] | data["is_hidden_bot"]
+
+            self.results = data
+            return data
+
         except Exception as e:
-            print(f"Ошибка при загрузке {file}: {e}")
-    
-    if not dfs:
-        raise ValueError("Не удалось загрузить ни одного файла")
-    return pd.concat(dfs, ignore_index=True)
+            self.logger.error(f"Detection failed: {str(e)}")
+            raise
 
-def detect_hidden_bots(df):
-    """Выявление скрытых ботов по поведенческим признакам"""
-    # Признаки ботов:
-    # 1. Слишком много запросов с одного IP
-    ip_request_counts = df['ip'].value_counts().rename('request_count')
-    df = df.merge(ip_request_counts.to_frame(), left_on='ip', right_index=True)
-    
-    # 2. Отсутствие User-Agent или подозрительные UA
-    if 'ua_header' in df.columns:
-        df['suspicious_ua'] = df['ua_header'].str.contains('bot|spider|crawl', case=False, na=False)
-    
-    # 3. Слишком высокая частота запросов
-    df['is_hidden_bot'] = (df['is_bot'] == False) & (
-        (df['request_count'] > 100) |
-        (df.get('suspicious_ua', False))
-    )
-    
-    df['is_bot'] = df['is_bot'] | df['is_hidden_bot']
-    return df
+    def generate_report(self) -> dict:
+        if self.results is None or self.results.empty:
+            return {
+                "summary": "No bots detected.",
+                "metrics": {},
+                "tables": {},
+                "plots": {}
+            }
 
-def print_top_bots(df, top_n=10):
-    """Вывод топ-N самых активных ботов"""
-    bot_activity = df[df['is_bot']].groupby('ip').agg(
-        total_requests=('request_count', 'max'),
-        first_seen=('ts', 'min'),
-        last_seen=('ts', 'max'),
-        is_hidden=('is_hidden_bot', 'any')
-    ).sort_values('total_requests', ascending=False).head(top_n)
-    
-    print(f"\n{'='*50}\nТоп-{top_n} самых активных ботов\n{'='*50}")
-    for i, (ip, row) in enumerate(bot_activity.iterrows(), 1):
-        print(f"{i}. IP: {ip}")
-        print(f"   Запросов: {row['total_requests']:,}")
-        print(f"   Период активности: {row['first_seen']} — {row['last_seen']}")
-        print(f"   Тип: {'скрытый' if row['is_hidden'] else 'явный'}")
-        print("-"*60)
+        df = self.results
+        total = len(df)
+        total_bots = df["is_bot"].sum()
+        hidden_bots = df["is_hidden_bot"].sum()
+        googlebots = df["is_googlebot_like"].sum()
 
-def analyze_activity(df):
-    """Расширенный анализ активности с визуализацией"""
-    print(f"\n{'='*50}\nОбщая статистика\n{'='*50}")
-    print(f"Всего записей: {len(df):,}")
-    print(f"Период данных: {df['date'].min()} — {df['date'].max()}")
-    print(f"Уникальных IP: {df['ip'].nunique():,}")
-    
-    # Статистика по ботам
-    total_bots = df['is_bot'].sum()
-    hidden_bots = df['is_hidden_bot'].sum()
-    
-    print(f"\nОбнаружено ботов: {total_bots:,} ({total_bots/len(df):.1%})")
-    print(f"Из них скрытых: {hidden_bots:,} ({hidden_bots/len(df):.1%})")
-    
-    # Визуализация
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    # График распределения
-    ax1.bar(['Люди', 'Боты (явные)', 'Боты (скрытые)'],
-            [len(df) - total_bots, total_bots - hidden_bots, hidden_bots],
-            color=['green', 'red', 'orange'])
-    ax1.set_title('Распределение запросов')
-    ax1.set_ylabel('Количество запросов')
-    
-    # График активности по часам
-    hourly_activity = df.groupby('hour').size()
-    hourly_activity.plot(kind='bar', ax=ax2, color='blue', alpha=0.7)
-    ax2.set_title('Активность по часам')
-    ax2.set_xlabel('Час дня')
-    ax2.set_ylabel('Запросов')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    # Вывод топ ботов
-    print_top_bots(df)
+        summary = (
+            f"Detected {total_bots} bots ({total_bots/total:.1%}), "
+            f"{hidden_bots} hidden ({hidden_bots/total:.1%}), "
+            f"{googlebots} Googlebot-like ({googlebots/total:.1%})"
+        )
 
-# Основной процесс анализа
-try:
-    print("Анализ активности и обнаружение ботов")
-    folder_path = get_user_path()
-    df = load_all_data(folder_path)
-    df = detect_hidden_bots(df)
-    analyze_activity(df)
+        top_bots = df[df["is_bot"]].groupby("ip").agg(
+            total_requests=("request_count", "max"),
+            first_seen=("ts", "min"),
+            last_seen=("ts", "max"),
+            is_hidden=("is_hidden_bot", "any"),
+            is_googlebot_like=("is_googlebot_like", "any")
+        ).sort_values("total_requests", ascending=False).head(self.top_n).reset_index()
 
-except Exception as e:
-    print(f"\nОшибка при анализе: {e}")
-finally:
-    print("\nАнализ завершен")
+        return {
+            "summary": summary,
+            "metrics": {
+                "total_requests": total,
+                "total_bots": int(total_bots),
+                "hidden_bots": int(hidden_bots),
+                "googlebot_like_count": int(googlebots),
+                "bot_ratio": f"{total_bots/total:.1%}",
+                "hidden_bot_ratio": f"{hidden_bots/total:.1%}",
+                "googlebot_like_ratio": f"{googlebots/total:.1%}"
+            },
+            "tables": {
+                "top_bots": top_bots
+            },
+            "plots": {
+                "bot_distribution": self._plot_distribution,
+                "hourly_activity": self._plot_hourly
+            }
+        }
+
+    def _plot_distribution(self):
+        df = self.results
+        humans = len(df) - df["is_bot"].sum()
+        bots = df["is_bot"].sum() - df["is_hidden_bot"].sum()
+        hidden = df["is_hidden_bot"].sum()
+
+        plt.figure(figsize=(6, 6))
+        plt.bar(["Humans", "Bots", "Hidden Bots"], [humans, bots, hidden],
+                color=["green", "red", "orange"])
+        plt.title("Request Distribution")
+        plt.ylabel("Count")
+        plt.grid(axis='y', alpha=0.3)
+
+    def _plot_hourly(self):
+        df = self.results
+        hourly = df.groupby("hour").size()
+        plt.figure(figsize=(10, 4))
+        hourly.plot(kind="bar", color="blue", alpha=0.7)
+        plt.title("Activity by Hour")
+        plt.xlabel("Hour")
+        plt.ylabel("Requests")
+        plt.grid(True, alpha=0.3)
