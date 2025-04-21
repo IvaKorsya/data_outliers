@@ -1,0 +1,8 @@
+{
+  "summary": "Night activity (00:00\u201307:00) detected: 774 events, 0.0% bots",
+  "metrics": {
+    "total_requests": 774,
+    "unique_ips": 486,
+    "bot_share": "0.0%"
+  }
+}
