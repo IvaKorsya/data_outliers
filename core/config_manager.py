@@ -9,7 +9,7 @@ class ConfigManager:
     def __init__(self, config_path='local.yaml'):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config_dir = Path(__file__).parent.parent / 'core' / 'config'
-        self.config_file = self.config_dir / config_path
+        self.config_file = Path(config_path)
         self.logger.info(f"Loading config from: {self.config_file}")
         self.config = self._load_config()
     
