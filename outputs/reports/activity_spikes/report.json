@@ -1,0 +1,11 @@
+{
+  "summary": "Found 10 activity spikes (matched: 10, unmatched: 0)",
+  "metrics": {
+    "total_spikes": 10,
+    "matched_shows": 10,
+    "unmatched_spikes": 0,
+    "max_requests": 2807,
+    "min_requests": 375,
+    "avg_requests": 1137.8
+  }
+}
