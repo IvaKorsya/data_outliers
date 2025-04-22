@@ -1,0 +1,9 @@
+{
+  "summary": "Node ID Validation Report\n========================================\nTotal URLs checked: 20\nConflicts found: 4\nHours with issues: 5\n\nSample conflicts:\n- https://example.com/Efon (Node IDs: 10)\n- https://example.com/Efon (Node IDs: 10)\n- https://example.com/iS40 (Node IDs: 10)",
+  "metrics": {
+    "total_urls": 20,
+    "conflict_urls": 4,
+    "conflict_rate": "20.0%",
+    "peak_conflict_hour": 0
+  }
+}

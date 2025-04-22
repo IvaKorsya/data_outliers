@@ -1,0 +1,55 @@
+
+        <html>
+        <head><title>Anomaly Detection Report</title></head>
+        <body>
+            <h1>Anomaly Detection Summary</h1>
+            <p>Detectors run: 6</p>
+            <h2>Results</h2>
+            <ul>
+                <li>Successful: activity_spikes, node_id_check, untagged_bots, isolation_forest, night_activity, page_view</li>
+                <li>Failed: 0</li>
+            </ul>
+            <h2>Metrics</h2>
+            <pre>{
+  "activity_spikes": {
+    "total_spikes": 50,
+    "matched_shows": 49,
+    "unmatched_spikes": 1,
+    "max_requests": 1300,
+    "min_requests": 87,
+    "avg_requests": 164.4
+  },
+  "node_id_check": {
+    "total_urls": 20,
+    "conflict_urls": 4,
+    "conflict_rate": "20.0%",
+    "peak_conflict_hour": 0
+  },
+  "untagged_bots": {
+    "total_requests": 2390,
+    "total_bots": 822,
+    "hidden_bots": 750,
+    "googlebot_like_count": 750,
+    "bot_ratio": "34.4%",
+    "hidden_bot_ratio": "31.4%",
+    "googlebot_like_ratio": "31.4%"
+  },
+  "isolation_forest": {
+    "total_anomalies": 24,
+    "max_requests": 14,
+    "avg_requests": 9.208333333333334,
+    "avg_bot_ratio": 0.020833333333333332
+  },
+  "night_activity": {
+    "total_requests": 787,
+    "unique_ips": 486,
+    "bot_share": "2.7%"
+  },
+  "page_view": {
+    "total_anomalies": 1,
+    "skip": 1
+  }
+}</pre>
+        </body>
+        </html>
+        
