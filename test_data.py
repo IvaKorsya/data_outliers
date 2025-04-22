@@ -13,6 +13,18 @@ def generate_random_string(length=8):
 start_date = datetime.now().replace(second=0, microsecond=0) - timedelta(days=1)
 timestamps = [start_date + timedelta(minutes=i) for i in range(1440)]
 events = ['page_view'] * 1200 + ['click'] * 240
+#  для users devices (устройство пренадлежит только одному типу)
+device_types = ['tablet', 'mobile', 'pc']
+base_size = 600
+base = pd.DataFrame({
+    'randPAS_session_id': [generate_random_string() for _ in range(base_size)],
+    'device': np.random.choice(device_types, size=base_size),
+}).drop_duplicates('randPAS_session_id')
+repeats = np.random.randint(1, 6, size = len(base))
+base = base.loc[base.index.repeat(repeats)].reset_index(drop=True)
+base = base.head(1440)
+for device in device_types:
+    base[f'ua_is_{device}'] = (base['device'] == device).astype(int)
 
 df = pd.DataFrame({
     'ts': timestamps,
@@ -21,8 +33,13 @@ df = pd.DataFrame({
     'requests': np.random.poisson(50, size=1440),
     'unique_ips': np.random.poisson(30, size=1440),
     'bot_ratio': np.random.uniform(0, 0.2, size=1440),
-    'ip': [f"192.168.{random.randint(0, 255)}.{random.randint(0, 255)}" for _ in range(1440)]
+    'ip': [f"192.168.{random.randint(0, 255)}.{random.randint(0, 255)}" for _ in range(1440)],
+    'randPAS_session_id': base['randPAS_session_id'].values,
+    'ua_is_tablet': base['ua_is_tablet'].values,
+    'ua_is_mobile': base['ua_is_mobile'].values,
+    'ua_is_pc': base['ua_is_pc'].values
 })
+del base
 
 # === АНОМАЛИИ ДЛЯ activity_spikes ===
 # Создаем пики, совпадающие с TV-программой
@@ -87,6 +104,28 @@ for ip in clean_ips:
 
 bot_df = pd.DataFrame(bot_entries)
 df = pd.concat([df, bot_df], ignore_index=True)
+
+
+# === users devices ===
+# внесение аномалий на уровне сессий ===
+anomaly_percentage = 0.10
+unique_sessions = df['randPAS_session_id'].unique()
+num_anomalies = int(len(unique_sessions) * anomaly_percentage)
+anomalous_sessions = np.random.choice(unique_sessions, size=num_anomalies, replace=False)
+for session in anomalous_sessions:
+    # Случайно выбираем тип аномалии (50/50)
+    if np.random.rand() > 0.5: 
+        # Тип 1: Разные устройства в рамках одной сессии
+        session_rows = df[df['randPAS_session_id'] == session]
+        devices = ['ua_is_tablet', 'ua_is_mobile', 'ua_is_pc']
+        for idx in session_rows.index:
+            random_device = np.random.choice(devices)
+            #df.loc[idx, devices] = 0  # сначала обнуляем все
+            df.loc[idx, random_device] = 1  # затем ставим 1 в случайное
+    else:
+        # Тип 2: Нет ни одного устройства во всей сессии
+        df.loc[df['randPAS_session_id'] == session, ['ua_is_tablet', 'ua_is_mobile', 'ua_is_pc']] = 0
+
 
 # === ФИНАЛЬНОЕ ОБЪЕДИНЕНИЕ ===
 df['ts'] = pd.to_datetime(df['ts']).dt.floor('min') + pd.to_timedelta(np.arange(len(df)), unit='s')

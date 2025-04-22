@@ -8,6 +8,7 @@ from .node_id_check import NodeIdCheckDetector
 from .page_view import PageViewOrderDetector
 from .untagged_bots import UntaggedBotsDetector
 from .isolation_forest import IsolationForestDetector
+from .users_devices import UsersDevicesDetector
 
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     'NodeIdCheckDetector',
     'PageViewOrderDetector',
     'UntaggedBotsDetector',
-    'IsolationForestDetector'
+    'IsolationForestDetector',
+    'UsersDevicesDetector'
 ]
 

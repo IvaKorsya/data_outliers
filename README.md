@@ -2,7 +2,7 @@
 
 Эта ветка существует чисто под тестирование фрейма, все методы-скрипты будут храниться в main, фрейм в разработке.
 
-# Уже интегрированы пять методов: activity_spikes, node_id_check, page_view, untagged_bots, isolation_forest
+# Уже интегрированы пять методов: activity_spikes, node_id_check, page_view, untagged_bots, isolation_forest, users_devices
 
 # Как запустить анализ?
 
@@ -23,11 +23,10 @@ python test_data.py
 ```
 Создаст файл data/test_activity.parquet с аномалиями для:
 
-резких всплесков (spikes)
-
-конфликтов node_id
-
-некорректной нумерации page_view_order_number
+- Резких всплесков (spikes)
+- Конфликтов node_id
+- Некорректной нумерации page_view_order_number
+- Сессий с несколькими/отсутствующими устройствами users_devices
 
 # Как переделать старый метод в детектор, совместимый с фреймворком
 
