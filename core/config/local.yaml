@@ -40,7 +40,7 @@ detectors:
     time_resolution: "1min"
     window_size: 5
     top_n: 50
-    schedule_file: "data/tv_schedule.csv"
+    schedule_file: "data/aggrs_tv_program_epg_plan.csv"
     time_column: 'ts'
 
   page_view:
