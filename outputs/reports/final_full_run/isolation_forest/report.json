@@ -1,0 +1,9 @@
+{
+  "summary": "Detected 24 anomalous intervals using Isolation Forest",
+  "metrics": {
+    "total_anomalies": 24,
+    "max_requests": 14,
+    "avg_requests": 9.208333333333334,
+    "avg_bot_ratio": 0.020833333333333332
+  }
+}

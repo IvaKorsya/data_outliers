@@ -1,0 +1,11 @@
+{
+  "summary": "Found 50 activity spikes (matched: 49, unmatched: 1)",
+  "metrics": {
+    "total_spikes": 50,
+    "matched_shows": 49,
+    "unmatched_spikes": 1,
+    "max_requests": 1300,
+    "min_requests": 87,
+    "avg_requests": 164.4
+  }
+}
