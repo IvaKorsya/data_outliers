@@ -3,10 +3,11 @@ data_loader:
   google_colab: false
   input_path: './data'
   output_path: './output'
-  file_pattern: 'sample_*.parquet'
+  file_pattern: '*.parquet'
   date_format: '%Y-%m-%d'
   max_workers: 2
   chunk_size: 5000
+  timestamp_column: 'ts'
 
 reporting:
   default_format: 'console'
@@ -29,14 +30,36 @@ detectors:
     n_estimators: 50
     features: ['requests', 'unique_ips']
     
-  node_id_check:
-    enabled: false
-    required_columns:
-      - url
-      - node_id
-
-  activity_spikes:
+node_id_check:
     enabled: true
-    resolution: '15min'
-    threshold: 2.0
-    schedule_file: "/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv"
+    required_columns: ['url', 'node_id', 'content_type']
+    validate_hourly: true
+    time_column: 'ts'
+
+activity_spikes:
+    enabled: true
+    time_resolution: "1min"  # Более точный анализ
+    window_size: 5           # Более чувствительный детектор
+    top_n: 50                # Больше аномалий
+    schedule_file: "data/tv_schedule.csv"
+    time_column: 'ts'
+
+page_view:
+  enabled: true
+  user_id_column: randPAS_user_agent_id
+  session_id_column: randPAS_session_id
+
+untagged_bots:
+  enabled: true
+  top_n: 10
+
+users_devices:
+  enabled: true
+  time_column: 'ts'
+  session_id_column: 'randPAS_session_id'
+  device_columns: ['ua_is_pc', 'ua_is_mobile', 'ua_is_tablet']
+
+plot_style: "ggplot"
+figure_size: [12, 6]
+font_size: 12
+title_size: 14

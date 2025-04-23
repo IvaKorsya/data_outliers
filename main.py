@@ -9,6 +9,12 @@ import sys
 from core.config_manager import ConfigManager
 from core.runner import AnalysisRunner
 from core.report_generator import ReportGenerator
+from core.detectors.activity_spikes import ActivitySpikesDetector
+from core.detectors.node_id_check import NodeIdCheckDetector
+from core.detectors.page_view import PageViewOrderDetector
+from core.detectors.untagged_bots import UntaggedBotsDetector
+from core.detectors.isolation_forest import IsolationForestDetector
+from core.detectors.users_devices import UsersDevicesDetector
 
 # Настройка логгера
 logging.basicConfig(
@@ -41,21 +47,24 @@ def load_detectors(detectors_dir: Path) -> Dict[str, type]:
     
     return detectors
 
+
 def setup_framework(config_path: str) -> AnalysisRunner:
-    """Инициализация фреймворка с динамической загрузкой детекторов"""
     config = ConfigManager(config_path).config
     runner = AnalysisRunner(config)
     
-    # Динамическая загрузка детекторов
-    detectors_dir = Path(__file__).parent / 'core' / 'detectors'
-    detectors = load_detectors(detectors_dir)
+    detectors = {
+        'activity_spikes': ActivitySpikesDetector,
+        'node_id_check': NodeIdCheckDetector,
+        'page_view': PageViewOrderDetector,
+        'untagged_bots': UntaggedBotsDetector,
+        'isolation_forest': IsolationForestDetector,
+        'users_devices' : UsersDevicesDetector
+    }
     
-    # Регистрация всех обнаруженных детекторов
     for name, detector in detectors.items():
         runner.register_detector(name, detector)
     
     return runner
-
 def parse_args():
     """Парсинг аргументов командной строки с улучшенной валидацией"""
     parser = argparse.ArgumentParser(

@@ -91,7 +91,7 @@ class BaseAnomalyDetector(ABC):
 
     def _init_plot_settings(self) -> None:
         """Инициализация настроек графиков."""
-        plt.style.use(self.config.get("plot_style", "seaborn"))
+        plt.style.use(self.config.get("plot_style", "ggplot"))
         self.plot_config = {
             "figure.figsize": self.config.get("figure_size", (12, 6)),
             "font.size": self.config.get("font_size", 12),

@@ -1,94 +1,178 @@
 # Разработка фреймворка единого алгоритма поиска аномалий
 
-Эта ветка существует чисто под фрейм, все методы-скрипты будут храниться в main
+Эта ветка существует чисто под тестирование фрейма, все методы-скрипты будут храниться в main, фрейм в разработке.
 
-# НЕ ПЫТАТЬСЯ СОВСМЕСТИТЬ C MAIN
+# Все семь методов интегрированы
+# Следующий этап - тестирование на реальных данных
 
-Пусть пока что здесь будет дневник разработчика
+# Как запустить анализ?
 
-Фрейм должен совмещать все методы поиска аномалий из мейна и уметь запускать их всех сразу, собирать информацию, загружать её в отчёты и складировать их в /outputs. 
-
-Для осуществления всех этих фич сначала надо написать код для самого фрейма, то есть взаимодействие разных файлов друг с другом, которое должно запускаться скриптом main.py и осуществлять анализ всех подходящих данных.
-Чтобы хоть как то объединить все придуманные методы в один фреймворк требуется их все переписать.
-
+Пример запуска:
 ```
 python main.py \
-  --config configs/local.yaml \
-  --data-path ./data \
-  --detectors isolation_forest,node_id_check \
-  --output-format html
+  --config core/local.yaml \
+  --data-path data/test_activity.parquet \
+  --detectors activity_spikes,node_id_check,page_view \
+  --output-format html \
+  --log-level INFO
 ```
+Можно использовать --detectors all, если нужно запустить всё, что включено в конфиг (enabled: true).
 
+# Как сгенерировать тестовые данные?
 ```
-python main.py \
-  --config configs/production.yaml \
-  --data-path /mnt/data/input \
-  --detectors all \
-  --output-dir /mnt/data/reports
+python test_data.py
 ```
-всё про взаимодействие собрано в /core
- # /core
-  - все детекторы и папка config перемещены сюда
-  - Базовый класс BaseAnomalyDetector служит архитектурным фундаментом для системы обнаружения аномалий, то есть неким скелетом любого взятого метода, думаю придётся их всех переделать.
-  - config manager нужен для загрузки значений постоянных в зависимости от нужд пользователя, от вида использования фрейма как конечного продукта
-  - data_loader загружает данные в зависимости от потребностей пользователя и рассчитан на даты в имени файлов\
-  - генератор отчётов делает всё точно соответствуя своему названию
-  - оркестратор анализа runner.py запускает параллельный анализ, все методы
-# Что делать?
+Создаст файл data/test_activity.parquet с аномалиями для:
 
-a) Стандартизация детекторов
+- Резких всплесков (spikes)
+- Конфликтов node_id
+- Некорректной нумерации page_view_order_number
+- Сессий с несколькими/отсутствующими устройствами users_devices
 
-Все детекторы должны быть переписаны по шаблону:
+# Как переделать старый метод в детектор, совместимый с фреймворком
+
+Шаги по адаптации:
+
+ 1. Создай файл core/detectors/your_method.py
+
+ 2. Создай класс, унаследованный от BaseAnomalyDetector, пример:
 
 ```
 from core.base_detector import BaseAnomalyDetector
 import pandas as pd
+import matplotlib.pyplot as plt
 
-class MyDetector(BaseAnomalyDetector):
+class YourMethodDetector(BaseAnomalyDetector):
     def __init__(self, config=None):
         super().__init__(config)
-        # Инициализация параметров из config
-        
+        # Прочти параметры из self.config
+
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        # Логика обнаружения аномалий
-        self.results = processed_data
-        return self.results
-        
+        # вставь свою логику сюда
+        # ВАЖНО: сохранить результат в self.results
+        ...
+        self.results = ...
+        return data  # можно вернуть обработанный data, если нужно
+
     def generate_report(self) -> dict:
+        if self.results is None or self.results.empty:
+            return {
+                "summary": "No anomalies detected.",
+                "metrics": {},
+                "tables": {},
+                "plots": {}
+            }
+
         return {
-            "summary": "Report summary",
-            "metrics": {...},
-            "tables": {...},
-            "plots": {...}
+            "summary": f"Found {len(self.results)} anomalies",
+            "metrics": {
+                "total": len(self.results)
+            },
+            "tables": {
+                "anomalies": self.results
+            },
+            "plots": {
+                "your_plot": self._plot_func
+            }
         }
- ```
-b)Исправление runner.py
 
-Основные исправления:
-
-Удалить дублирование кода
-
-Добавить проверку интерфейса детекторов
-
-Использовать конфигурацию из ConfigManager
-
-c) Обновление зависимостей-----# done
-
-Дополнить requirements.txt:
+    def _plot_func(self):
+        # вставить сюда отрисовку графика
+        ...
 ```
-scipy>=1.10.0
-pyyaml>=6.0
+ 3. Перенеси ключевую логику:
+
+Из скрипта:
+
+- фильтрация → в detect()
+
+- сохранение → заменить на self.results = ...
+
+- графики → сделать функциями и вернуть в generate_report
+
+Пример — до и после
+
+# Было:
 ```
-d) Удаление Colab-зависимостей
-Заменить все вызовы drive.mount() на работу с локальными путями из конфига.
+df = pd.read_parquet("data.parquet")
+peaks = detect_spikes(df)
+peaks.to_csv("output.csv")
+```
+# Стало:
+```
+def detect(self, data):
+    ...
+    self.results = peaks_df
+    return data
+```
+4.Добавь импорт в core/detectors/__init__.py:
+```
+from .your_method import YourMethodDetector
+__all__ = [...
+           ('YourMethodDetector'),
+          ....]
+```
+5.Добавь в main.py:
+```
+from core.detectors.your_method import YourMethodDetector
+
+detectors = {
+    ...
+    'your_method': YourMethodDetector
+}
+```
+6.Проверь конфигурацию в core/config/local.yaml:
+```
+  your_method:
+    enabled: true
+    threshold: 0.9
+    ...
+```
+7. Допиши test_data.py, если нужны специальные данные(а они чаще всего нужны)
+
+#  Структура generate_report() должна возвращать(как минимум):
+```
+{
+  "summary": "Краткое описание результата",
+  "metrics": {"метрика": значение},
+  "tables": {"название": pd.DataFrame},
+  "plots": {"название": функция_отрисовки}
+}
+```
+# Как фреймворк работает внутри?
+
+1. main.py запускает AnalysisRunner
+
+2. Загружается дата через DataLoader
+
+3. Для каждого детектора:
+
+    3.1 вызывается detect()
+
+    3.2 затем generate_report()
+
+    3.3 сохраняется в outputs/reports/<название_детектора>/
+
+ 4. report_generator.py собирает финальный summary_report.html или .json
+
+#  Пример финального отчёта:
+
+- meta.json — краткое описание и параметры
+
+- tables/*.parquet|csv — сохранённые таблицы
+
+- plots/*.png — графики
+
+- summary_report.html — сводный HTML отчёт
 
  # Примерный вид структуры фрейма
 
-anomaly_detection_framework/
-
-```│
+```
 anomaly_detection_framework/
 │
+├── main.py                    # Точка входа
+├── test_data.py               # Генерация тестовых данных
+├── requirements.txt
 │
 ├── core/                           # Ядро системы
     ├── config/                        # Конфигурации для всех сред
@@ -110,11 +194,9 @@ anomaly_detection_framework/
 │   ├── report_generator.py         # Генерация отчетов
 │   └── runner.py                   # Оркестратор анализа
 │
+├── data/                           # Обязвтельная пустая папка для данных, иначе они не будут генерироваться
 ├── outputs/                        # Автосохранение результатов
 │   ├── reports/                    # Готовые отчеты
 │   └── datasets/                   # Обработанные данные
-│
-├── main.py                         # Точка входа
-├── requirements.txt                # Зависимости
 └── README.md                       # Инструкции
 ```

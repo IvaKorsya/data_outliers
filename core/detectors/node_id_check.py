@@ -1,116 +1,114 @@
+from core.base_detector import BaseAnomalyDetector
 import pandas as pd
-import os
-import glob
-from IPython.display import display
-from google.colab import drive
-drive.mount('/content/drive')
+import matplotlib.pyplot as plt
+from typing import Dict, Any
+import logging
 
-def get_user_file_path():
-    """Запрашивает путь к файлу/папке у пользователя с проверкой"""
-    while True:
-        path = input("Введите путь к файлу .parquet или папке с файлами: ").strip()
+class NodeIdCheckDetector(BaseAnomalyDetector):
+    def __init__(self, config=None):
+        super().__init__(config)
+        self.required_columns = self.config.get(
+            'required_columns', 
+            ['url', 'node_id', 'content_type']
+        )
+        self.validate_hourly = self.config.get('validate_hourly', True)  # По умолчанию включим
         
-        # Проверка существования пути
-        if not os.path.exists(path):
-            print(f"Ошибка: путь '{path}' не существует. Попробуйте снова.")
-            continue
+    def detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Проверка корректности node_id"""
+        try:
+            # Проверка наличия обязательных колонок
+            missing_cols = [col for col in self.required_columns if col not in data.columns]
+            if missing_cols:
+                raise ValueError(f"Missing required columns: {missing_cols}")
             
-        # Если это папка - ищем parquet-файлы
-        if os.path.isdir(path):
-            parquet_files = glob.glob(os.path.join(path, '*.parquet'))
-            if not parquet_files:
-                print(f"В папке '{path}' не найдено .parquet файлов.")
-                continue
-            return parquet_files[0] if len(parquet_files) == 1 else path
+            results = {
+                'invalid_node_ids': [],
+                'hourly_issues': {},
+                'checked_urls': data['url'].nunique(),
+                'data_sample': data.head(1000)  # Сохраняем сэмпл для графиков
+            }
             
-        # Если это файл - проверяем расширение
-        elif not path.lower().endswith('.parquet'):
-            print("Файл должен иметь расширение .parquet")
-            continue
+            # Проверка уникальности node_id
+            grouped = data.groupby(['url', 'node_id']).size().reset_index(name='count')
+            duplicates = grouped[grouped.duplicated(['url'], keep=False)]
             
-        return path
+            if not duplicates.empty:
+                results['invalid_node_ids'] = duplicates.to_dict('records')
+            
+            # Почасовой анализ
+            if self.validate_hourly:
+                data['hour'] = pd.to_datetime(data['ts']).dt.hour
+                for hour, group in data.groupby('hour'):
+                    hour_group = group.groupby(['url', 'node_id']).size().reset_index(name='count')
+                    hour_duplicates = hour_group[hour_group.duplicated(['url'], keep=False)]
+                    if not hour_duplicates.empty:
+                        results['hourly_issues'][hour] = hour_duplicates.to_dict('records')
+            
+            self.results = results
+            return data
+            
+        except Exception as e:
+            self.logger.error(f"Detection failed: {str(e)}")
+            raise
 
-def load_data(file_path):
-    """Загружает данные с обработкой ошибок"""
-    try:
-        if os.path.isdir(file_path):
-            # Загрузка всех parquet-файлов из папки
-            files = glob.glob(os.path.join(file_path, '*.parquet'))
-            dfs = [pd.read_parquet(f) for f in files]
-            data = pd.concat(dfs, ignore_index=True)
-            print(f"Загружено {len(files)} файлов, всего {len(data)} строк")
-        else:
-            # Загрузка одного файла
-            data = pd.read_parquet(file_path)
-            print(f"Загружен файл {os.path.basename(file_path)}, {len(data)} строк")
-        return data
-    except Exception as e:
-        print(f"Ошибка при загрузке данных: {e}")
-        return None
-
-def analyze_missing_node_ids(data):
-    """Анализирует строки с отсутствующим node_id"""
-    # Условия для проверки
-    required_columns = ['url', 'main_rubric_id', 'content_is_longread', 
-                       'content_editor_id', 'content_author_ids', 'title']
-    
-    # Проверяем наличие всех требуемых столбцов
-    missing_cols = [col for col in required_columns if col not in data.columns]
-    if missing_cols:
-        print(f"Предупреждение: отсутствуют столбцы: {', '.join(missing_cols)}")
-        required_columns = [col for col in required_columns if col in data.columns]
-    
-    # Фильтрация строк
-    mask = data['node_id'].isnull() & data[required_columns].notnull().any(axis=1)
-    missing_node_id = data[mask]
-    
-    return missing_node_id, required_columns
-
-def generate_report(missing_data, columns_checked):
-    """Генерирует детальный отчет"""
-    if not missing_data.empty:
-        print("\n" + "="*50)
-        print(f"Найдено {len(missing_data)} строк с отсутствующим node_id")
-        print(f"Проверяемые столбцы: {', '.join(columns_checked)}")
-        print("="*50)
+    def generate_report(self) -> Dict[str, Any]:
+        if not hasattr(self, 'results'):
+            raise ValueError("No results available. Run detect() first.")
+            
+        invalid_nodes = self.results['invalid_node_ids']
+        hourly_issues = self.results['hourly_issues']
         
-        # Группировка по причинам
-        reasons = []
-        for col in columns_checked:
-            reason_count = len(missing_data[missing_data[col].notnull()])
-            reasons.append(f"{col}: {reason_count}")
+        # Формируем отчет
+        report = {
+            "summary": self._generate_summary(invalid_nodes, hourly_issues),
+            "metrics": self._generate_metrics(invalid_nodes, hourly_issues),
+            "tables": self._generate_tables(invalid_nodes),
+            "plots": self._generate_plots(hourly_issues)
+        }
         
-        print("\nПричины (заполненные столбцы):")
-        print("\n".join(reasons))
-        
-        # Топ-5 наиболее частых URL
-        if 'url' in missing_data.columns:
-            print("\nТоп-5 URL с проблемами:")
-            display(missing_data['url'].value_counts().head(5))
-        
-        # Сохранение результатов
-        save_path = "missing_node_id_results.csv"
-        missing_data.to_csv(save_path, index=False)
-        print(f"\nРезультаты сохранены в {save_path}")
-    else:
-        print("\nПроблемных строк не обнаружено.")
+        return report
 
-def main():
-    print("Анализ отсутствующих node_id")
-    
-    # Получаем путь к данным
-    file_path = get_user_file_path()
-    
-    # Загружаем данные
-    data = load_data(file_path)
-    if data is None:
-        return
-    
-    # Анализируем проблемные строки
-    missing_data, checked_columns = analyze_missing_node_ids(data)
-    
-    # Генерируем отчет
-    generate_report(missing_data, checked_columns)
+    def _generate_summary(self, invalid_nodes, hourly_issues):
+        lines = [
+            "Node ID Validation Report",
+            "="*40,
+            f"Total URLs checked: {self.results['checked_urls']}",
+            f"Conflicts found: {len(invalid_nodes)}",
+            f"Hours with issues: {len(hourly_issues)}"
+        ]
+        if invalid_nodes:
+            lines.extend([
+                "\nSample conflicts:",
+                *[f"- {x['url']} (Node IDs: {x['count']})" for x in invalid_nodes[:3]]
+            ])
+        return "\n".join(lines)
 
-if __name__ == "__main__":
-    main()
+    def _generate_metrics(self, invalid_nodes, hourly_issues):
+        return {
+            "total_urls": self.results['checked_urls'],
+            "conflict_urls": len(invalid_nodes),
+            "conflict_rate": f"{len(invalid_nodes)/max(1, self.results['checked_urls']):.1%}",
+            "peak_conflict_hour": max(hourly_issues.items(), key=lambda x: len(x[1]))[0] if hourly_issues else None
+        }
+
+    def _generate_tables(self, invalid_nodes):
+        return {
+            "top_conflicts": pd.DataFrame(invalid_nodes).sort_values('count', ascending=False).head(10)
+        } if invalid_nodes else {}
+
+    def _generate_plots(self, hourly_issues):
+        if not hourly_issues:
+            return {}
+            
+        def plot_conflicts_by_hour():
+            plt.figure(figsize=(12, 6))
+            hours, counts = zip(*sorted(
+                [(h, len(issues)) for h, issues in hourly_issues.items()]
+            ))
+            plt.bar(hours, counts, color='#ff7f0e')
+            plt.title('Node ID Conflicts by Hour')
+            plt.xlabel('Hour of Day')
+            plt.ylabel('Number of Conflicts')
+            plt.grid(True, alpha=0.3)
+            
+        return {"hourly_conflicts": plot_conflicts_by_hour}

@@ -1,18 +1,22 @@
-# detectors/__init__.py
+from core.data_loader import DataLoader
+from core.report_generator import ReportGenerator
+from core.runner import AnalysisRunner
+__all__ = ['DataLoader', 'ReportGenerator', 'AnalysisRunner']
+# core/detectors/__init__.py
 from .activity_spikes import ActivitySpikesDetector
-from .isolation_forest import IsolationForestDetector
-from .night_activity import NightActivityDetector
-from .node_id_check import NodeIdChecker
-from .page_view import PageViewAnomalyDetector
+from .node_id_check import NodeIdCheckDetector
+from .page_view import PageViewOrderDetector
 from .untagged_bots import UntaggedBotsDetector
-from .test_detector import TestDetector
+from .isolation_forest import IsolationForestDetector
+from .users_devices import UsersDevicesDetector
+
 
 __all__ = [
     'ActivitySpikesDetector',
-    'IsolationForestDetector',
-    'NightActivityDetector',
-    'NodeIdChecker',
-    'PageViewAnomalyDetector',
+    'NodeIdCheckDetector',
+    'PageViewOrderDetector',
     'UntaggedBotsDetector',
-    'TestDetector'
+    'IsolationForestDetector',
+    'UsersDevicesDetector'
 ]
+
