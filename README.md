@@ -10,7 +10,7 @@
 Пример запуска:
 ```
 python main.py \
-  --config core/local.yaml \
+  --config core/config/local.yaml \
   --data-path data/test_activity.parquet \
   --detectors activity_spikes,node_id_check,page_view \
   --output-format html \
