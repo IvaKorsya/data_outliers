@@ -25,7 +25,7 @@
 | `page_view`        | `page_view_order_number` — содержит `NaN` или `inf`, `randPAS_user_agent_id` — иногда `list` (не hashable) |
 | `isolation_forest` | `requests` и `unique_ips` отсутствуют или содержат `NaN`. Также возможен `float NaN to int` в отчёте. |
 | `users_devices`    | Не тестирован полностью |
-| `node_id_check`    | Адаптирован, но не находит конфликты с отсутствием node_id, но присутствием описания контента|
+| `node_id_check`    | Адаптирован, не находит конфликты с отсутствием node_id и присутствием описания контента.|
 
 ##  Советы для доработки детекторов
 
