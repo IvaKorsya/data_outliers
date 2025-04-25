@@ -56,6 +56,7 @@ python test_data.py
 - Конфликтов node_id
 - Некорректной нумерации page_view_order_number
 - Сессий с несколькими/отсутствующими устройствами users_devices
+
 Пример тестового запуска:
 ```
 python main.py \
