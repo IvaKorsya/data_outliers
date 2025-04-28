@@ -56,6 +56,11 @@ isolation_forest:
   night_activity:
     enabled: true
     min_requests_threshold: 100  # можно добавить параметров позже при необходимости
+  users_devices:
+    enabled: true
+    time_column: 'ts'
+    session_id_column: 'randPAS_session_id'
+    device_columns: ['ua_is_pc', 'ua_is_mobile', 'ua_is_tablet']
 
 plot_style: "ggplot"
 figure_size: [12, 6]
