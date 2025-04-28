@@ -1,47 +1,48 @@
 from core.base_detector import BaseAnomalyDetector
 import pandas as pd
-import numpy as np
-from sklearn.ensemble import IsolationForest
 import matplotlib.pyplot as plt
-
+from sklearn.ensemble import IsolationForest
 
 class IsolationForestDetector(BaseAnomalyDetector):
     def __init__(self, config=None):
         super().__init__(config)
-        self.contamination = self.config.get("contamination", 0.05)
-        self.n_estimators = self.config.get("n_estimators", 100)
-        self.interval_minutes = self.config.get("interval_minutes", 5)
-        self.features = self.config.get("features", ["requests", "unique_ips"])
+        self.contamination = config.get('contamination', 0.05)
+        self.n_estimators = config.get('n_estimators', 100)
+        self.interval_minutes = config.get('interval_minutes', 5)
+        self.time_column = config.get('time_column', 'ts')
 
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
         try:
-            df = data.copy()
-            df["ts"] = pd.to_datetime(df["ts"])
-            df["is_bot"] = df.get("ua_is_bot", 0).fillna(0).astype(int) > 0
+            data = data.copy()
 
-            # Агрегация по интервалу
-            interval_str = f"{self.interval_minutes}min"
-            df["time_interval"] = df["ts"].dt.floor(interval_str)
-            grouped = df.groupby("time_interval").agg(
-                requests=("ip", "count"),
-                unique_ips=("ip", "nunique"),
-                bot_ratio=("is_bot", "mean"),
-                bot_count=("is_bot", "sum"),
-                human_count=("is_bot", lambda x: len(x) - sum(x))
+            if self.time_column not in data.columns:
+                raise ValueError(f"Missing time column: {self.time_column}")
+
+            data[self.time_column] = pd.to_datetime(data[self.time_column], errors='coerce')
+            data['time_interval'] = data[self.time_column].dt.floor(f"{self.interval_minutes}min")
+
+            # Агрегация активности
+            agg = data.groupby('time_interval').agg(
+                requests=('ip', 'count'),
+                unique_ips=('ip', 'nunique')
             ).reset_index()
 
-            # Isolation Forest
+            if agg.empty or len(agg) < 10:
+                raise ValueError("Not enough data for anomaly detection after aggregation.")
+
+            # Запуск Isolation Forest
             model = IsolationForest(
                 contamination=self.contamination,
                 n_estimators=self.n_estimators,
                 random_state=42
             )
-            preds = model.fit_predict(grouped[self.features])
-            grouped["is_anomaly"] = preds == -1
+            model.fit(agg[['requests', 'unique_ips']])
 
-            self.results = grouped
-            self.anomalies = grouped[grouped["is_anomaly"]]
-            return grouped
+            agg['anomaly'] = model.predict(agg[['requests', 'unique_ips']])
+            agg['anomaly'] = agg['anomaly'].map({1: 0, -1: 1})  # 1 - нормальные, -1 - аномалии
+
+            self.results = agg
+            return data
 
         except Exception as e:
             self.logger.error(f"Detection failed: {str(e)}")
@@ -50,76 +51,44 @@ class IsolationForestDetector(BaseAnomalyDetector):
     def generate_report(self) -> dict:
         if self.results is None or self.results.empty:
             return {
-                "summary": "No data available.",
+                "summary": "No anomalies detected by IsolationForest.",
                 "metrics": {},
                 "tables": {},
                 "plots": {}
             }
 
-        anomalies = self.anomalies
-        total_anomalies = len(anomalies)
+        anomalies = self.results[self.results['anomaly'] == 1]
+        normal = self.results[self.results['anomaly'] == 0]
+
+        def plot():
+            plt.figure(figsize=(14, 7))
+            plt.scatter(
+                normal['requests'], normal['unique_ips'],
+                color='blue', label='Normal', alpha=0.5
+            )
+            plt.scatter(
+                anomalies['requests'], anomalies['unique_ips'],
+                color='red', label='Anomalies', marker='x'
+            )
+            plt.title("Isolation Forest Anomaly Detection")
+            plt.xlabel("Requests per Interval")
+            plt.ylabel("Unique IPs per Interval")
+            plt.legend()
+            plt.grid(True)
+            plt.tight_layout()
 
         return {
-            "summary": f"Detected {total_anomalies} anomalous intervals using Isolation Forest",
+            "summary": f"Detected {len(anomalies)} anomalies with Isolation Forest.",
             "metrics": {
-                "total_anomalies": total_anomalies,
-                "max_requests": int(anomalies["requests"].max()),
-                "avg_requests": float(anomalies["requests"].mean()),
-                "avg_bot_ratio": float(anomalies["bot_ratio"].mean()),
+                "total_intervals": int(len(self.results)),
+                "total_anomalies": int(len(anomalies)),
+                "max_requests_in_anomalies": int(anomalies['requests'].max()) if not anomalies.empty else 0,
+                "max_unique_ips_in_anomalies": int(anomalies['unique_ips'].max()) if not anomalies.empty else 0
             },
             "tables": {
-                "anomalies": anomalies.sort_values("requests", ascending=False).head(10)
+                "anomalous_intervals": anomalies
             },
             "plots": {
-                "anomalies_by_hour": self._plot_anomaly_distribution,
-                "bot_vs_human_ratio": self._plot_pie_ratio,
-                "scatter_requests_ips": self._plot_scatter,
-                "requests_time_series": self._plot_time_series
+                "anomalies_plot": plot
             }
         }
-
-    def _plot_anomaly_distribution(self):
-        hourly = self.anomalies["time_interval"].dt.hour.value_counts().sort_index()
-        plt.figure(figsize=(8, 4))
-        hourly.plot(kind="bar", color="orange")
-        plt.title("Аномалии по часам")
-        plt.xlabel("Час")
-        plt.ylabel("Число аномалий")
-        plt.grid(axis='y', alpha=0.3)
-
-    def _plot_pie_ratio(self):
-        bot = self.anomalies["bot_count"].sum()
-        human = self.anomalies["human_count"].sum()
-        plt.figure(figsize=(5, 5))
-        plt.pie([bot, human], labels=["Bots", "Humans"], colors=["red", "green"], autopct="%1.1f%%")
-        plt.title("Боты vs Люди в аномалиях")
-
-    def _plot_scatter(self):
-        plt.figure(figsize=(6, 5))
-        colors = np.where(self.results["is_anomaly"], "red", "blue")
-        plt.scatter(
-            self.results["requests"],
-            self.results["unique_ips"],
-            c=colors,
-            alpha=0.6
-        )
-        plt.xlabel("Requests")
-        plt.ylabel("Unique IPs")
-        plt.title("Запросы vs Уникальные IP (красные — аномалии)")
-        plt.grid(True, alpha=0.3)
-
-    def _plot_time_series(self):
-        plt.figure(figsize=(10, 5))
-        plt.plot(self.results["time_interval"], self.results["requests"], label="Requests", color="blue")
-        plt.scatter(
-            self.anomalies["time_interval"],
-            self.anomalies["requests"],
-            color="red",
-            label="Anomalies"
-        )
-        plt.title("Временной ряд с аномалиями")
-        plt.xlabel("Время")
-        plt.ylabel("Запросы")
-        plt.legend()
-        plt.xticks(rotation=45)
-        plt.grid(True, alpha=0.3)

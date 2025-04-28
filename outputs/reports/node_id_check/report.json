@@ -1,0 +1,7 @@
+{
+  "summary": "Detected 50 entries with missing node_id and content presence.",
+  "metrics": {
+    "conflict_count": 50,
+    "hours_with_issues": 8
+  }
+}

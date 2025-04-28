@@ -23,15 +23,16 @@ detectors:
     log_level: 'DEBUG'
     sample_fraction: 0.1
 
-  isolation_forest:
-    enabled: true
-    contamination: 0.1
-    n_estimators: 50
-    features: ['requests', 'unique_ips']
+isolation_forest:
+  enabled: true
+  contamination: 0.02        # Ожидаем около 2% аномалий (на реальных данных очень даже нормально)
+  n_estimators: 150           # Увеличили количество деревьев для лучшей стабильности
+  interval_minutes: 3         # Более мелкие интервалы времени дадут больше точности
+  time_column: 'ts'           # Название колонки с временной меткой
 
   node_id_check:
     enabled: true
-    required_columns: ['url', 'node_id', 'content_type']
+    required_columns: ['url', 'node_id',]
     validate_hourly: true
     time_column: 'ts'
 
