@@ -1,4 +1,4 @@
-# core/detectors/activity_spikes.py
+# core/detectors/isolation_forest.py
 from core.base_detector import BaseAnomalyDetector
 import pandas as pd
 import matplotlib.pyplot as plt
