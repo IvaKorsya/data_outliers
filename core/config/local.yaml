@@ -10,7 +10,7 @@ data_loader:
 
 reporting:
   default_format: 'console'
-  save_plots: false
+  save_plots: true
   save_tables: true
   max_table_rows: 100
 
@@ -25,10 +25,10 @@ detectors:
 
 isolation_forest:
   enabled: true
-  contamination: 0.02        # Ожидаем около 2% аномалий (на реальных данных очень даже нормально)
-  n_estimators: 150           # Увеличили количество деревьев для лучшей стабильности
-  interval_minutes: 3         # Более мелкие интервалы времени дадут больше точности
-  time_column: 'ts'           # Название колонки с временной меткой
+  contamination: 0.02       
+  n_estimators: 150         
+  interval_minutes: 3       
+  time_column: 'ts'         
 
   node_id_check:
     enabled: true
@@ -55,7 +55,7 @@ isolation_forest:
 
   night_activity:
     enabled: true
-    min_requests_threshold: 100  # можно добавить параметров позже при необходимости
+    min_requests_threshold: 100  
   users_devices:
     enabled: true
     time_column: 'ts'
