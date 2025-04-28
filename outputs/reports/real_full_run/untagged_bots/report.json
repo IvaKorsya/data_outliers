@@ -1,0 +1,8 @@
+{
+  "summary": "Detected 28047 bots (17627 hidden)",
+  "metrics": {
+    "total_requests": 389000,
+    "total_bots": 28047,
+    "hidden_bots": 17627
+  }
+}

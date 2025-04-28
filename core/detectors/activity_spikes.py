@@ -1,11 +1,10 @@
 # core/detectors/activity_spikes.py
+# core/detectors/activity_spikes.py
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 from core.base_detector import BaseAnomalyDetector
-import logging
-
 
 class ActivitySpikesDetector(BaseAnomalyDetector):
     def __init__(self, config=None):
@@ -23,7 +22,6 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         event_counts = data['event'].value_counts().to_dict()
         self.logger.debug(f"[DEBUG] Events: {event_counts}")
 
-        # 1. Фильтрация событий
         data = data[data['event'] == 'page_view']
         if data.empty:
             raise ValueError("No 'page_view' events found.")
@@ -32,7 +30,6 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         data['ua_is_bot'] = data.get('ua_is_bot', 0).fillna(0).astype(int)
         data['is_bot'] = data['ua_is_bot'] > 0
 
-        # 2. Агрегация
         activity = (
             data.groupby(data['ts'].dt.floor(self.time_resolution))
                 .size()
@@ -47,7 +44,6 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
             self.results = activity
             return activity
 
-        # 3. Поиск локальных максимумов
         activity['is_peak'] = False
         peaks_idx = argrelextrema(activity['total_requests'].values, np.greater, order=self.window_size)[0]
         activity.loc[peaks_idx, 'is_peak'] = True
@@ -55,6 +51,9 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
 
         if self.schedule_file:
             self._match_with_schedule()
+        else:
+            self.peaks['matched_shows'] = [[] for _ in range(len(self.peaks))]
+            self.peaks['matched_count'] = 0
 
         self.results = activity
         return activity
@@ -66,9 +65,7 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
             schedule_df['end_ts'] = schedule_df['start_ts'] + pd.to_timedelta(schedule_df['dur'], unit='s')
 
             def find_matches(ts):
-                matched = schedule_df[
-                    (schedule_df['start_ts'] <= ts) & (schedule_df['end_ts'] >= ts)
-                ]
+                matched = schedule_df[(schedule_df['start_ts'] <= ts) & (schedule_df['end_ts'] >= ts)]
                 return matched[['title', 'event_type', 'channel_id']].to_dict(orient='records')
 
             self.peaks['matched_shows'] = self.peaks['ts'].apply(find_matches)
@@ -76,6 +73,8 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
 
         except Exception as e:
             self.logger.warning(f"Schedule matching failed: {e}")
+            self.peaks['matched_shows'] = [[] for _ in range(len(self.peaks))]
+            self.peaks['matched_count'] = 0
 
     def generate_report(self) -> dict:
         if self.peaks.empty:
