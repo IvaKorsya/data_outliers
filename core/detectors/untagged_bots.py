@@ -1,4 +1,4 @@
-# DETECTOR 1: UntaggedBotsDetector (адаптирован под реальные данные)
+# core/detectors/untagged_bots.py
 from core.base_detector import BaseAnomalyDetector
 import pandas as pd
 
