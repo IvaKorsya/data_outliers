@@ -38,9 +38,9 @@ isolation_forest:
 
   activity_spikes:
     enabled: true
-    time_resolution: "1min"
+    time_resolution: "10s"
     window_size: 5
-    top_n: 50
+    top_n: 10
     schedule_file: "data/aggrs_tv_program_epg_plan.csv"
     time_column: 'ts'
 
