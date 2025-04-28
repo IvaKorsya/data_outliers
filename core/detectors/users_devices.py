@@ -1,3 +1,4 @@
+# core/detectors/users_devices.py
 from core.base_detector import BaseAnomalyDetector
 import pandas as pd
 import matplotlib.pyplot as plt
