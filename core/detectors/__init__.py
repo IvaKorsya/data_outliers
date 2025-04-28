@@ -9,6 +9,7 @@ from .page_view import PageViewOrderDetector
 from .untagged_bots import UntaggedBotsDetector
 from .isolation_forest import IsolationForestDetector
 from .night_activity import NightActivityDetector
+from .users_devices import UsersDevicesDetector
 
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     'PageViewOrderDetector',
     'UntaggedBotsDetector',
     'IsolationForestDetector',
-    'NightActivityDetector'
+    'NightActivityDetector',
+    'UsersDevicesDetector'
 ]
 
