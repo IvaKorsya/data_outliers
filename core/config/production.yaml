@@ -22,28 +22,55 @@ detectors:
   common:
     log_level: 'INFO'
     sample_fraction: 1.0
-  
+
   isolation_forest:
     enabled: true
     contamination: 0.05
     n_estimators: 100
     features: ['requests', 'unique_ips', 'bot_ratio']
-    
+
   node_id_check:
     enabled: true
     required_columns:
-      - url
       - node_id
-      - content_type
+      - main_rubric_id
+      - content_is_longread
     validate_hourly: true
 
   activity_spikes:
     enabled: true
-    resolution: '1min'
-    threshold: 3.5
-    min_duration: '5min'
-    schedule_file: "/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv"
+    time_resolution: '1min'
+    window_size: 5
+    top_n: 20
+    schedule_file: "/mnt/data/input/aggrs_tv_program_epg_plan.csv"
+    time_column: 'ts'
+
+
+  page_view:
+    enabled: true
+    user_id_column: 'randPAS_user_agent_id'
+    session_id_column: 'randPAS_session_id'
+
+  untagged_bots:
+    enabled: true
+    top_n: 20
+
+  night_activity:
+    enabled: true
+    time_column: 'ts'
+    night_hours: [0, 1, 2, 3, 4, 5]
+
+  users_devices:
+    enabled: true
+    required_columns:
+      - ts
+      - ua_is_tablet
+      - ua_is_mobile
+      - ua_is_pc
+      - randPAS_session_id
+
 plot_style: "ggplot"
 figure_size: [12, 6]
 font_size: 12
 title_size: 14
+
