@@ -1,4 +1,3 @@
-
 data_loader:
   google_colab: false
   input_path: './data'
@@ -11,7 +10,7 @@ data_loader:
 
 reporting:
   default_format: 'console'
-  save_plots: false
+  save_plots: true
   save_tables: true
   max_table_rows: 100
 
@@ -23,41 +22,45 @@ detectors:
   common:
     log_level: 'DEBUG'
     sample_fraction: 0.1
-  
-  isolation_forest:
+
+isolation_forest:
+  enabled: true
+  contamination: 0.02       
+  n_estimators: 150         
+  interval_minutes: 3       
+  time_column: 'ts'         
+
+  node_id_check:
     enabled: true
-    contamination: 0.1
-    n_estimators: 50
-    features: ['requests', 'unique_ips']
-    
-node_id_check:
-    enabled: true
-    required_columns: ['url', 'node_id', 'content_type']
+    required_columns: ['url', 'node_id',]
     validate_hourly: true
     time_column: 'ts'
 
-activity_spikes:
+  activity_spikes:
     enabled: true
-    time_resolution: "1min"  # Более точный анализ
-    window_size: 5           # Более чувствительный детектор
-    top_n: 50                # Больше аномалий
-    schedule_file: "data/tv_schedule.csv"
+    time_resolution: "10s"
+    window_size: 5
+    top_n: 10
+    schedule_file: "data/aggrs_tv_program_epg_plan.csv"
     time_column: 'ts'
 
-page_view:
-  enabled: true
-  user_id_column: randPAS_user_agent_id
-  session_id_column: randPAS_session_id
+  page_view:
+    enabled: true
+    user_id_column: randPAS_user_agent_id
+    session_id_column: randPAS_session_id
 
-untagged_bots:
-  enabled: true
-  top_n: 10
+  untagged_bots:
+    enabled: true
+    top_n: 10
 
-users_devices:
-  enabled: true
-  time_column: 'ts'
-  session_id_column: 'randPAS_session_id'
-  device_columns: ['ua_is_pc', 'ua_is_mobile', 'ua_is_tablet']
+  night_activity:
+    enabled: true
+    min_requests_threshold: 100  
+  users_devices:
+    enabled: true
+    time_column: 'ts'
+    session_id_column: 'randPAS_session_id'
+    device_columns: ['ua_is_pc', 'ua_is_mobile', 'ua_is_tablet']
 
 plot_style: "ggplot"
 figure_size: [12, 6]
