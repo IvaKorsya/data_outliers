@@ -14,6 +14,7 @@ from core.detectors.node_id_check import NodeIdCheckDetector
 from core.detectors.page_view import PageViewOrderDetector
 from core.detectors.untagged_bots import UntaggedBotsDetector
 from core.detectors.isolation_forest import IsolationForestDetector
+from core.detectors.night_activity import NightActivityDetector
 from core.detectors.users_devices import UsersDevicesDetector
 
 # Настройка логгера
@@ -58,6 +59,7 @@ def setup_framework(config_path: str) -> AnalysisRunner:
         'page_view': PageViewOrderDetector,
         'untagged_bots': UntaggedBotsDetector,
         'isolation_forest': IsolationForestDetector,
+        'night_activity': NightActivityDetector,
         'users_devices' : UsersDevicesDetector
     }
     
