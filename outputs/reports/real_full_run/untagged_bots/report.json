@@ -1,0 +1,9 @@
+{
+  "summary": "Detected 2723 suspicious bot-like requests.",
+  "metrics": {
+    "total_requests": 389000,
+    "total_bots": 10420,
+    "hidden_bots": 2723,
+    "human_requests": 375857
+  }
+}

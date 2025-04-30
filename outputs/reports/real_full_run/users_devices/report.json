@@ -1,0 +1,14 @@
+{
+  "summary": "Device usage analysis:\n- Single device sessions: -343512\n- Multi-device sessions: 546\n- Null device sessions: 386525\n- Simultaneous device usage: 119 rows",
+  "metrics": {
+    "total_sessions": 43559,
+    "pc_users": 0.051760925449871466,
+    "mobile_users": 0.21635218508997428,
+    "tablet_users": 0.005138817480719794,
+    "multi_device_sessions": 546,
+    "null_device_sessions": 386525,
+    "simultaneous_usage": 119,
+    "peak_hour": 3,
+    "sessions_in_peak": 36913
+  }
+}

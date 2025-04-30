@@ -1,10 +1,9 @@
 # core/detectors/activity_spikes.py
-from core.base_detector import BaseAnomalyDetector
 import pandas as pd
 import numpy as np
-from scipy.signal import argrelextrema
-import logging
 import matplotlib.pyplot as plt
+from scipy.signal import argrelextrema
+from core.base_detector import BaseAnomalyDetector
 
 class ActivitySpikesDetector(BaseAnomalyDetector):
     def __init__(self, config=None):
@@ -15,103 +14,109 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         self.top_n = self.config.get('top_n', 10)
 
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Основной метод обнаружения аномалий"""
-        try:
-            data = self._filter_data(data, {'event': 'page_view'})
-            data['ts'] = pd.to_datetime(data['ts'])
+        self.logger.debug(f"[DEBUG] Input rows: {len(data)}")
+        if 'event' not in data.columns or 'ts' not in data.columns:
+            raise ValueError("Required columns 'event' and 'ts' are missing.")
 
-            activity = data.groupby(data['ts'].dt.floor(self.time_resolution))['requests'].sum().reset_index(name='total_requests')
+        event_counts = data['event'].value_counts().to_dict()
+        self.logger.debug(f"[DEBUG] Events: {event_counts}")
 
-            peaks_idx = argrelextrema(
-                activity['total_requests'].values,
-                np.greater,
-                order=self.window_size
-            )[0]
-            activity['is_peak'] = activity.index.isin(peaks_idx)
-            self.peaks = activity[activity['is_peak']].nlargest(self.top_n, 'total_requests')
+        data = data[data['event'] == 'page_view']
+        if data.empty:
+            raise ValueError("No 'page_view' events found.")
 
-            self.unmatched_peaks = []
-            if self.schedule_file:
-                self._match_with_schedule()
+        data['ts'] = pd.to_datetime(data['ts'])
+        data['ua_is_bot'] = data.get('ua_is_bot', 0).fillna(0).astype(int)
+        data['is_bot'] = data['ua_is_bot'] > 0
 
+        activity = (
+            data.groupby(data['ts'].dt.floor(self.time_resolution))
+                .size()
+                .reset_index(name='total_requests')
+        )
+
+        self.logger.debug(f"[DEBUG] Activity shape: {activity.shape}")
+
+        if len(activity) <= self.window_size * 2:
+            self.logger.warning("Not enough data points to detect spikes.")
+            self.peaks = pd.DataFrame()
             self.results = activity
             return activity
 
-        except Exception as e:
-            self.logger.error(f"Detection failed: {str(e)}")
-            raise
+        activity['is_peak'] = False
+        peaks_idx = argrelextrema(activity['total_requests'].values, np.greater, order=self.window_size)[0]
+        activity.loc[peaks_idx, 'is_peak'] = True
+        self.peaks = activity[activity['is_peak']].nlargest(self.top_n, 'total_requests').copy()
+
+        if self.schedule_file:
+            self._match_with_schedule()
+        else:
+            self.peaks['matched_shows'] = [[] for _ in range(len(self.peaks))]
+            self.peaks['matched_count'] = 0
+
+        self.results = activity
+        return activity
 
     def _match_with_schedule(self):
-        """Сопоставление пиков с телепрограммой"""
         try:
             schedule_df = pd.read_csv(self.schedule_file)
             schedule_df['start_ts'] = pd.to_datetime(schedule_df['start_ts'])
             schedule_df['end_ts'] = schedule_df['start_ts'] + pd.to_timedelta(schedule_df['dur'], unit='s')
 
-            matched = []
-            unmatched = []
+            def find_matches(ts):
+                matched = schedule_df[(schedule_df['start_ts'] <= ts) & (schedule_df['end_ts'] >= ts)]
+                return matched[['title', 'event_type', 'channel_id']].to_dict(orient='records')
 
-            def find_show(ts):
-                match = schedule_df[(schedule_df['start_ts'] <= ts) & (schedule_df['end_ts'] >= ts)]
-                return match[['title', 'event_type', 'channel_id']].to_dict('records')
-
-            self.peaks['matched_shows'] = self.peaks['ts'].apply(lambda x: find_show(x))
-            for _, row in self.peaks.iterrows():
-                if row['matched_shows']:
-                    matched.append(row)
-                else:
-                    unmatched.append(row)
-
-            self.unmatched_peaks = pd.DataFrame(unmatched)
+            self.peaks['matched_shows'] = self.peaks['ts'].apply(find_matches)
+            self.peaks['matched_count'] = self.peaks['matched_shows'].apply(len)
 
         except Exception as e:
-            self.logger.warning(f"Schedule matching failed: {str(e)}")
+            self.logger.warning(f"Schedule matching failed: {e}")
+            self.peaks['matched_shows'] = [[] for _ in range(len(self.peaks))]
+            self.peaks['matched_count'] = 0
 
     def generate_report(self) -> dict:
-        """Генерация стандартизированного отчета"""
-        if not hasattr(self, 'peaks') or self.peaks.empty:
+        if self.peaks.empty:
             return {
-                "summary": "No activity spikes detected",
+                "summary": "No activity spikes detected.",
                 "metrics": {},
                 "tables": {},
                 "plots": {}
             }
 
-        peaks_df = self.peaks.copy()
-        peaks_df['total_requests'] = peaks_df['total_requests'].astype(int)
-
-        unmatched_count = len(self.unmatched_peaks) if hasattr(self, 'unmatched_peaks') else 0
-        matched_count = len(peaks_df) - unmatched_count
+        matched_total = int(self.peaks['matched_count'].sum()) if 'matched_count' in self.peaks else 0
+        unmatched_total = int((self.peaks['matched_count'] == 0).sum())
 
         return {
-            "summary": f"Found {len(peaks_df)} activity spikes (matched: {matched_count}, unmatched: {unmatched_count})",
+            "summary": f"Found {len(self.peaks)} activity spikes.",
             "metrics": {
-                "total_spikes": len(peaks_df),
-                "matched_shows": matched_count,
-                "unmatched_spikes": unmatched_count,
-                "max_requests": int(peaks_df['total_requests'].max()),
-                "min_requests": int(peaks_df['total_requests'].min()),
-                "avg_requests": float(peaks_df['total_requests'].mean())
+                "total_spikes": int(len(self.peaks)),
+                "matched_shows": matched_total,
+                "unmatched_spikes": unmatched_total,
+                "max_requests": int(self.peaks['total_requests'].max()),
+                "min_requests": int(self.peaks['total_requests'].min()),
+                "avg_requests": float(self.peaks['total_requests'].mean())
             },
             "tables": {
-                "peaks_data": peaks_df,
-                "unmatched_peaks": self.unmatched_peaks if unmatched_count > 0 else pd.DataFrame(),
-                "full_activity": self.results
+                "top_spikes": self.peaks
             },
             "plots": {
-                "activity_plot": self._plot_activity
+                "activity_spikes_plot": self._plot_activity
             }
         }
 
     def _plot_activity(self):
-        """Генерация графика активности"""
-        plt.figure(figsize=self.plot_config["figure.figsize"])
-        plt.plot(self.results['ts'], self.results['total_requests'], label='Requests', color='blue', alpha=0.7)
-        plt.scatter(self.peaks['ts'], self.peaks['total_requests'], color='red', label='Spikes', zorder=3)
-        plt.title('Activity Spikes Detection')
-        plt.xlabel('Time')
-        plt.ylabel('Requests count')
+        if self.results is None or self.results.empty:
+            return
+
+        plt.figure(figsize=(12, 6))
+        plt.plot(self.results['ts'], self.results['total_requests'], label='Total Requests', alpha=0.7)
+        if not self.peaks.empty:
+            plt.scatter(self.peaks['ts'], self.peaks['total_requests'], color='red', label='Spikes')
+        plt.title("Activity Spikes")
+        plt.xlabel("Time")
+        plt.ylabel("Requests")
+        plt.xticks(rotation=45)
         plt.legend()
         plt.grid(True)
-        plt.xticks(rotation=45)
-
+        plt.tight_layout()

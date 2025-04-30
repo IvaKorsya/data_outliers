@@ -1,0 +1,59 @@
+
+        <html>
+        <head><title>Anomaly Detection Report</title></head>
+        <body>
+            <h1>Anomaly Detection Summary</h1>
+            <p>Detectors run: 7</p>
+            <h2>Results</h2>
+            <ul>
+                <li>Successful: activity_spikes, node_id_check, page_view, untagged_bots, isolation_forest, night_activity, users_devices</li>
+                <li>Failed: 0</li>
+            </ul>
+            <h2>Metrics</h2>
+            <pre>{
+  "activity_spikes": {},
+  "node_id_check": {
+    "conflict_count": 305074,
+    "hours_with_issues": 2
+  },
+  "page_view": {
+    "total_anomalies": 1344,
+    "skip": 1252,
+    "reset": 92
+  },
+  "untagged_bots": {
+    "total_requests": 389000,
+    "total_bots": 10420,
+    "hidden_bots": 2723,
+    "human_requests": 375857
+  },
+  "isolation_forest": {
+    "total_intervals": 14,
+    "total_anomalies": 1,
+    "max_requests_in_anomalies": 8192,
+    "max_unique_ips_in_anomalies": 1786
+  },
+  "night_activity": {
+    "total_requests": 389000,
+    "unique_ips": 34300,
+    "bot_share": "2.7%",
+    "total_anomalous_ips": 66,
+    "bot_ips": 9,
+    "human_ips": 66,
+    "max_requests": 5221
+  },
+  "users_devices": {
+    "total_sessions": 43559,
+    "pc_users": 0.051760925449871466,
+    "mobile_users": 0.21635218508997428,
+    "tablet_users": 0.005138817480719794,
+    "multi_device_sessions": 546,
+    "null_device_sessions": 386525,
+    "simultaneous_usage": 119,
+    "peak_hour": 3,
+    "sessions_in_peak": 36913
+  }
+}</pre>
+        </body>
+        </html>
+        
