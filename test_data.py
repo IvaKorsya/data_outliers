@@ -1,155 +1,93 @@
-# === UPDATED test_data.py ===
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import random
 import string
+import os
 
+# === Параметры генерации ===
+NUM_ROWS = 100_000
+START_DATE = datetime.now() - timedelta(days=1)
 
-def generate_random_string(length=8):
+# Функция генерации случайной строки
+def random_string(length=10):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-# === БАЗОВАЯ АКТИВНОСТЬ ДЛЯ activity_spikes ===
-start_date = datetime.now().replace(second=0, microsecond=0) - timedelta(days=1)
-timestamps = [start_date + timedelta(minutes=i) for i in range(1440)]
-events = ['page_view'] * 1200 + ['click'] * 240
-#  для users devices (устройство пренадлежит только одному типу)
-device_types = ['tablet', 'mobile', 'pc']
-base_size = 600
-base = pd.DataFrame({
-    'randPAS_session_id': [generate_random_string() for _ in range(base_size)],
-    'device': np.random.choice(device_types, size=base_size),
-}).drop_duplicates('randPAS_session_id')
-repeats = np.random.randint(1, 6, size = len(base))
-base = base.loc[base.index.repeat(repeats)].reset_index(drop=True)
-base = base.head(1440)
-for device in device_types:
-    base[f'ua_is_{device}'] = (base['device'] == device).astype(int)
+# === Генерация основных событий ===
+events_distribution = (['page_ping'] * 80_000) + (['page_view'] * 10_000) + (
+    random.choices(['page_scroll', 'external_link_click', 'impression_view', 'login_signin',
+                    'login_signout', 'pay_start', 'pay_confirm', 'subscription_cancel_view'], k=10_000))
+random.shuffle(events_distribution)
 
+# === Базовый датафрейм ===
+ts_list = [START_DATE + timedelta(seconds=i*30) for i in range(NUM_ROWS)]
+ips = [f"192.168.{random.randint(0, 255)}.{random.randint(0, 255)}" for _ in range(NUM_ROWS)]
+
+# Создание базовых колонок
 df = pd.DataFrame({
-    'ts': timestamps,
-    'event': np.random.choice(events, size=1440),
-    'user_id': np.random.randint(1000, 1100, size=1440),
-    'requests': np.random.poisson(50, size=1440),
-    'unique_ips': np.random.poisson(30, size=1440),
-    'bot_ratio': np.random.uniform(0, 0.2, size=1440),
-    'ip': [f"192.168.{random.randint(0, 255)}.{random.randint(0, 255)}" for _ in range(1440)],
-    'randPAS_session_id': base['randPAS_session_id'].values,
-    'ua_is_tablet': base['ua_is_tablet'].values,
-    'ua_is_mobile': base['ua_is_mobile'].values,
-    'ua_is_pc': base['ua_is_pc'].values
+    'ts': ts_list,
+    'ip': ips,
+    'event': events_distribution,
+    'page_view_order_number': np.random.randint(1, 20, size=NUM_ROWS, dtype=np.uint32),
+    'event_order_number': np.random.randint(1, 100, size=NUM_ROWS, dtype=np.uint32),
+    'secs': np.random.randint(0, 60, size=NUM_ROWS, dtype=np.uint32),
+    'url': [f"https://example.com/{random_string(5)}" for _ in range(NUM_ROWS)],
+    'referer': [f"https://google.com/{random_string(5)}" for _ in range(NUM_ROWS)],
+    'randPAS_user_passport_id': [random_string(10) for _ in range(NUM_ROWS)],
+    'randPAS_user_agent_id': [random_string(15) for _ in range(NUM_ROWS)],
+    'randPAS_trex_cid': [random_string(8) for _ in range(NUM_ROWS)],
+    'randPAS_uma_media_cid': [random_string(8) for _ in range(NUM_ROWS)],
+    'randPAS_session_id': [random_string(12) for _ in range(NUM_ROWS)],
+    'is_new_page': np.random.choice([0, 1], size=NUM_ROWS, p=[0.8, 0.2]).astype(np.int8),
+    'title': [f"Title {random.randint(1, 1000)}" for _ in range(NUM_ROWS)],
+    'node_id': np.random.randint(1, 5000, size=NUM_ROWS, dtype=np.uint32),
+    'main_rubric_id': np.random.randint(1, 100, size=NUM_ROWS, dtype=np.uint32),
+    'content_is_longread': np.random.choice([0, 1], size=NUM_ROWS, p=[0.9, 0.1]).astype(np.int8),
+    'content_editor_id': np.random.randint(1, 1000, size=NUM_ROWS, dtype=np.uint32),
+    'content_author_ids': [random_string(5) for _ in range(NUM_ROWS)],
+    'is_registration': np.random.choice([0, 1, np.nan], size=NUM_ROWS, p=[0.45, 0.45, 0.1]),
+    'is_fast_login': np.random.choice([0, 1, np.nan], size=NUM_ROWS, p=[0.45, 0.45, 0.1]),
+    'ua_device_family': [random.choice(['iPhone', 'Android', 'Windows', 'Mac', None]) for _ in range(NUM_ROWS)],
+    'ua_device_brand': [random.choice(['Apple', 'Samsung', 'Xiaomi', 'None']) for _ in range(NUM_ROWS)],
+    'ua_device_model': [random_string(6) for _ in range(NUM_ROWS)],
+    'ua_os_family': [random.choice(['iOS', 'Android', 'Windows', 'MacOS']) for _ in range(NUM_ROWS)],
+    'ua_os_version': [str(random.randint(1, 15)) for _ in range(NUM_ROWS)],
+    'ua_browser_family': [random.choice(['Chrome', 'Firefox', 'Safari']) for _ in range(NUM_ROWS)],
+    'ua_browser_version': [str(random.randint(50, 100)) for _ in range(NUM_ROWS)],
+    'ua_is_mobile': np.random.choice([0, 1, np.nan], size=NUM_ROWS, p=[0.4, 0.4, 0.2]),
+    'ua_is_tablet': np.random.choice([0, 1, np.nan], size=NUM_ROWS, p=[0.8, 0.1, 0.1]),
+    'ua_is_pc': np.random.choice([0, 1, np.nan], size=NUM_ROWS, p=[0.8, 0.1, 0.1]),
+    'ua_is_bot': np.random.choice([0, 1, np.nan], size=NUM_ROWS, p=[0.95, 0.04, 0.01]),
+    'ua_device_type': [random.choice(['mobile', 'tablet', 'desktop']) for _ in range(NUM_ROWS)],
+    'geo_city_id': np.random.choice([random.randint(10000, 99999), np.nan], size=NUM_ROWS),
+    'date': [START_DATE.date() for _ in range(NUM_ROWS)]
 })
-del base
 
-# === АНОМАЛИИ ДЛЯ activity_spikes ===
-# Создаем пики, совпадающие с TV-программой
-anomaly_ranges = []
-for i in range(5, 10):
-    start = i * 60 + 2  # 02-минутные пики в каждом часу
-    end = start + 1
-    df.loc[start:end, 'requests'] = 500 + i * 100
-    df.loc[start:end, 'unique_ips'] = 300 + i * 10
-    df.loc[start:end, 'bot_ratio'] = np.random.uniform(0.3, 0.9, size=end - start + 1)
-    anomaly_ranges.append((start, end, int(df.loc[start, 'requests'])))
+# === Специальные аномалии ===
+# === АНОМАЛИИ ДЛЯ page_view ===
+# Специально создаём неправильную последовательность просмотров в сессиях
+session_ids = df['randPAS_session_id'].dropna().unique()
 
-# === node_id_check ===
-urls = [f"https://example.com/{generate_random_string(4)}" for _ in range(20)]
-content_types = ['article', 'video', 'image', 'product']
-node_data = []
-for url in urls:
-    if random.random() < 0.1:
-        node_ids = [generate_random_string(8) for _ in range(2)]
-    else:
-        node_ids = [generate_random_string(8)]
-    for node_id in node_ids:
-        node_data.append({
-            'url': url,
-            'node_id': node_id,
-            'content_type': random.choice(content_types),
-            'title': f"Content {generate_random_string(6)}"
-        })
-node_df = pd.DataFrame(node_data * 10)
-
-# === untagged_bots ===
-bot_ips = [f"10.0.0.{i}" for i in range(5)]
-bot_entries = []
-for ip in bot_ips:
-    for _ in range(150):
-        bot_entries.append({
-            'ts': start_date + timedelta(seconds=np.random.randint(0, 86400)),
-            'event': 'page_view',
-            'user_id': np.random.randint(2000, 2100),
-            'requests': np.random.poisson(20),
-            'unique_ips': np.random.poisson(10),
-            'bot_ratio': np.random.uniform(0.4, 0.9),
-            'ip': ip,
-            'ua_is_bot': 0,
-            'ua_header': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
-        })
-
-clean_ips = [f"192.0.2.{i}" for i in range(10)]
-for ip in clean_ips:
-    for _ in range(20):
-        bot_entries.append({
-            'ts': start_date + timedelta(seconds=np.random.randint(0, 86400)),
-            'event': 'click',
-            'user_id': np.random.randint(3000, 3100),
-            'requests': np.random.poisson(2),
-            'unique_ips': np.random.poisson(1),
-            'bot_ratio': np.random.uniform(0, 0.05),
-            'ip': ip,
-            'ua_is_bot': 0,
-            'ua_header': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-        })
-
-bot_df = pd.DataFrame(bot_entries)
-df = pd.concat([df, bot_df], ignore_index=True)
+for sess in np.random.choice(session_ids, size=30, replace=False):
+    indices = df[df['randPAS_session_id'] == sess].index
+    if len(indices) > 3:
+        glitch_idx = np.random.choice(indices[1:], size=1)
+        df.loc[glitch_idx, 'page_view_order_number'] += np.random.randint(2, 5)  # пропуск нескольких порядков
 
 
-# === users devices ===
-# внесение аномалий на уровне сессий ===
-anomaly_percentage = 0.10
-unique_sessions = df['randPAS_session_id'].unique()
-num_anomalies = int(len(unique_sessions) * anomaly_percentage)
-anomalous_sessions = np.random.choice(unique_sessions, size=num_anomalies, replace=False)
-for session in anomalous_sessions:
-    # Случайно выбираем тип аномалии (50/50)
-    if np.random.rand() > 0.5: 
-        # Тип 1: Разные устройства в рамках одной сессии
-        session_rows = df[df['randPAS_session_id'] == session]
-        devices = ['ua_is_tablet', 'ua_is_mobile', 'ua_is_pc']
-        for idx in session_rows.index:
-            random_device = np.random.choice(devices)
-            #df.loc[idx, devices] = 0  # сначала обнуляем все
-            df.loc[idx, random_device] = 1  # затем ставим 1 в случайное
-    else:
-        # Тип 2: Нет ни одного устройства во всей сессии
-        df.loc[df['randPAS_session_id'] == session, ['ua_is_tablet', 'ua_is_mobile', 'ua_is_pc']] = 0
+# 2. node_id_check аномалии
+for i in range(20000, 21000, 100):
+    df.loc[i:i+4, 'node_id'] = 0  # Изменено i:i+4 вместо i:i+5
 
+# 3. activity_spikes
+for i in range(30000, 40000, 500):
+    df.loc[i:i+9, 'event'] = 'page_view'  # Изменено i:i+9 вместо i:i+10
 
-# === ФИНАЛЬНОЕ ОБЪЕДИНЕНИЕ ===
-df['ts'] = pd.to_datetime(df['ts']).dt.floor('min') + pd.to_timedelta(np.arange(len(df)), unit='s')
-final_df = pd.merge(df, node_df, left_index=True, right_index=True, how='left', suffixes=('', '_node'))
-final_df['ts'] = pd.to_datetime(final_df['ts'])
-final_df.drop(['ts_node'], axis=1, inplace=True, errors='ignore')
+# 4. night_activity (добавляем всплески ночью)
+df.loc[df['ts'].dt.hour.isin([2, 3, 4]), 'ua_is_bot'] = 1
 
-# === СОХРАНЕНИЕ ===
-final_df.to_parquet('data/test_activity.parquet')
+# === Сохраняем в Parquet ===
+os.makedirs('data', exist_ok=True)
+df.to_parquet('data/test_activity.parquet')
 
-# === ТВ-РАСПИСАНИЕ (с совпадениями) ===
-schedule = pd.DataFrame({
-    'start_ts': [start_date + timedelta(hours=i) for i in range(24)],
-    'dur': [3600] * 24,
-    'title': [f'Program {i}' for i in range(24)],
-    'event_type': ['show'] * 24,
-    'channel_id': [i % 5 + 1 for i in range(24)],
-    'expected_activity': np.random.poisson(200, size=24)
-})
-schedule.to_csv('data/tv_schedule.csv', index=False)
-
-print("\n Generated test data with forced schedule overlap")
-print(f"• Activity spikes at: {anomaly_ranges}")
-print(f"• node_id conflicts: 10% URLs with multiple node_ids")
-print(f"• Hidden bots: {len(bot_ips)} IPs × 150 req")
-print(f"• Clean users: {len(clean_ips)} IPs × 20 req")
-print(" Saved to: data/test_activity.parquet")
+print(f"✅ Сгенерировано {NUM_ROWS:,} строк с аномалиями.\nФайл сохранен: data/test_activity.parquet")
