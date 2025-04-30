@@ -1,9 +1,0 @@
-{
-  "summary": "Node ID Validation Report\n========================================\nTotal URLs checked: 20\nConflicts found: 0\nHours with issues: 0",
-  "metrics": {
-    "total_urls": 20,
-    "conflict_urls": 0,
-    "conflict_rate": "0.0%",
-    "peak_conflict_hour": null
-  }
-}
