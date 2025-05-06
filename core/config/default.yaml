@@ -38,7 +38,7 @@ detectors:
 
   activity_spikes:
     enabled: true
-    time_resolution: '10s'  
+    time_resolution: '1H'  
     window_size: 5
     top_n: 10
     schedule_file: "/content/drive/MyDrive/aggrs_tv_program_epg_plan.csv"
