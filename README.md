@@ -156,8 +156,8 @@ pip install -r requirements.txt
 ```bash
 python main.py \
   --config core/config/local.yaml \
-  --data-path data/test_activity.parquet \
-  --detectors activity_spikes node_id_check \
+  --data-path data/data_2024-10-04.parquet \
+  --detectors node_id_check,activity_spikes,page_view \
   --output-format html \
   --output-dir outputs/reports/manual_run \
   --log-level DEBUG
