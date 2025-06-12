@@ -1,4 +1,5 @@
 # core/detectors/activity_spikes.py
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +19,7 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         if 'event' not in data.columns or 'ts' not in data.columns:
             raise ValueError("Required columns 'event' and 'ts' are missing.")
 
+        # Фильтрация по событиям
         event_counts = data['event'].value_counts().to_dict()
         self.logger.debug(f"[DEBUG] Events: {event_counts}")
 
@@ -25,29 +27,42 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
         if data.empty:
             raise ValueError("No 'page_view' events found.")
 
+        # Подготовка временного ряда
         data['ts'] = pd.to_datetime(data['ts'])
         data['ua_is_bot'] = data.get('ua_is_bot', 0).fillna(0).astype(int)
         data['is_bot'] = data['ua_is_bot'] > 0
 
+        # Группировка через resample для всех интервалов
+        data = data.set_index('ts').sort_index()
         activity = (
-            data.groupby(data['ts'].dt.floor(self.time_resolution))
-                .size()
-                .reset_index(name='total_requests')
+            data['event']
+            .resample(self.time_resolution)
+            .count()
+            .reset_index(name='total_requests')
         )
 
-        self.logger.debug(f"[DEBUG] Activity shape: {activity.shape}")
+        self.logger.debug(f"[DEBUG] Activity shape after resample: {activity.shape}")
+        self.logger.debug(f"[DEBUG] Activity stats:\n{activity['total_requests'].describe()}")
 
-        if len(activity) <= self.window_size * 2:
+        # Динамическая адаптация window_size
+        min_required_points = max(5, self.window_size * 2)
+        effective_window = min(self.window_size, max(1, len(activity) // 5))
+
+        if len(activity) <= min_required_points:
             self.logger.warning("Not enough data points to detect spikes.")
             self.peaks = pd.DataFrame()
             self.results = activity
             return activity
 
+        # Поиск локальных максимумов
         activity['is_peak'] = False
-        peaks_idx = argrelextrema(activity['total_requests'].values, np.greater, order=self.window_size)[0]
+        peaks_idx = argrelextrema(activity['total_requests'].values, np.greater, order=effective_window)[0]
         activity.loc[peaks_idx, 'is_peak'] = True
+
+        # Топ N пиков
         self.peaks = activity[activity['is_peak']].nlargest(self.top_n, 'total_requests').copy()
 
+        # Сопоставление с телепрограммой
         if self.schedule_file:
             self._match_with_schedule()
         else:
@@ -65,7 +80,7 @@ class ActivitySpikesDetector(BaseAnomalyDetector):
 
             def find_matches(ts):
                 matched = schedule_df[(schedule_df['start_ts'] <= ts) & (schedule_df['end_ts'] >= ts)]
-                return matched[['title', 'event_type', 'channel_id']].to_dict(orient='records')
+                return matched[['title', 'event_type', 'channel_id']].to_dict(orient='records') if not matched.empty else []
 
             self.peaks['matched_shows'] = self.peaks['ts'].apply(find_matches)
             self.peaks['matched_count'] = self.peaks['matched_shows'].apply(len)
