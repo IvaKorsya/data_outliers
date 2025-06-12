@@ -21,7 +21,7 @@ execution:
 detectors:
   common:
     log_level: 'DEBUG'
-    sample_fraction: 0.1
+    sample_fraction: 1.0
 
 isolation_forest:
   enabled: true
@@ -38,8 +38,8 @@ isolation_forest:
 
   activity_spikes:
     enabled: true
-    time_resolution: "1H"
-    window_size: 5
+    time_resolution: "2min"
+    window_size: 2
     top_n: 10
     schedule_file: "data/aggrs_tv_program_epg_plan.csv"
     time_column: 'ts'
