@@ -1,0 +1,9 @@
+{
+  "summary": "Detected 5 anomalies with Isolation Forest.",
+  "metrics": {
+    "total_intervals": 1001,
+    "total_anomalies": 5,
+    "max_requests_in_anomalies": 100,
+    "max_unique_ips_in_anomalies": 98
+  }
+}

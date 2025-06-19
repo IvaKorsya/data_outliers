@@ -22,24 +22,24 @@ detectors:
   common:
     log_level: 'DEBUG'
     sample_fraction: 1.0
-
-isolation_forest:
-  enabled: true
-  contamination: 0.02       
-  n_estimators: 150         
-  interval_minutes: 3       
-  time_column: 'ts'         
+  
+  isolation_forest:
+    enabled: true
+    contamination: 0.02       
+    n_estimators: 50         
+    interval_minutes: 2       
+    time_column: 'ts'         
 
   node_id_check:
     enabled: true
-    required_columns: ['url', 'node_id',]
+    required_columns: ['url', 'node_id']  # Убрана лишняя запятая
     validate_hourly: true
     time_column: 'ts'
 
   activity_spikes:
     enabled: true
-    time_resolution: "2min"
-    window_size: 2
+    time_resolution: "3min"
+    window_size: 5
     top_n: 10
     schedule_file: "data/aggrs_tv_program_epg_plan.csv"
     time_column: 'ts'
@@ -55,7 +55,8 @@ isolation_forest:
 
   night_activity:
     enabled: true
-    min_requests_threshold: 100  
+    min_requests_threshold: 100
+  
   users_devices:
     enabled: true
     time_column: 'ts'

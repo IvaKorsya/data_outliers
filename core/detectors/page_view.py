@@ -10,21 +10,39 @@ class PageViewOrderDetector(BaseAnomalyDetector):
         self.session_col = config.get("session_id_column", "randPAS_session_id")
         self.results = pd.DataFrame()
         self.total_records = 0
+        
+        # Логирование инициализации
+        self.logger.debug("[DEBUG] PageViewOrderDetector initialized")
+        self.logger.debug(
+            f"[DEBUG] Configuration:\n"
+            f"User column: {self.user_col}\n"
+            f"Session column: {self.session_col}"
+        )
 
     def detect(self, data: pd.DataFrame) -> pd.DataFrame:
         try:
             data = data.copy()
+            
+            # Логирование входных данных
+            self.logger.debug(f"[DEBUG] Starting detection. Input rows: {len(data)}")
+            if not data.empty:
+                self.logger.debug(f"[DEBUG] Event distribution:\n{data['event'].value_counts().to_dict()}")
 
             # Проверяем наличие нужных колонок
-            for col in [self.user_col, self.session_col, 'page_view_order_number', 'event']:
+            required_cols = [self.user_col, self.session_col, 'page_view_order_number', 'event']
+            for col in required_cols:
                 if col not in data.columns:
-                    raise ValueError(f"Missing required column: {col}")
+                    error_msg = f"Missing required column: {col}"
+                    self.logger.error(f"[ERROR] {error_msg}")
+                    raise ValueError(error_msg)
 
             # Фильтрация только page_view событий
             data = data[data['event'] == 'page_view']
+            self.logger.debug(f"[DEBUG] Page view events after filtering: {len(data)}")
 
             # Убираем пустые записи
             data = data.dropna(subset=[self.user_col, self.session_col, 'page_view_order_number'])
+            self.logger.debug(f"[DEBUG] Valid records after NA removal: {len(data)}")
 
             # Приводим типы
             data[self.user_col] = data[self.user_col].astype(str)
@@ -32,9 +50,12 @@ class PageViewOrderDetector(BaseAnomalyDetector):
             data['page_view_order_number'] = pd.to_numeric(data['page_view_order_number'], errors='coerce').fillna(0).astype(int)
 
             self.total_records = len(data)
+            self.logger.debug(f"[DEBUG] Processing {self.total_records} valid page view records")
 
             anomalies = []
             grouped = data.sort_values(['ts']).groupby([self.user_col, self.session_col])
+            session_count = grouped.ngroups
+            self.logger.debug(f"[DEBUG] Analyzing {session_count} user sessions")
 
             for (user_id, session_id), group in grouped:
                 page_numbers = group['page_view_order_number'].tolist()
@@ -65,14 +86,32 @@ class PageViewOrderDetector(BaseAnomalyDetector):
                         })
 
             self.results = pd.DataFrame(anomalies)
+            
+            # Логирование результатов
+            if not self.results.empty:
+                anomaly_types = self.results['type'].value_counts().to_dict()
+                self.logger.info(
+                    f"[INFO] Found {len(self.results)} anomalies in {session_count} sessions\n"
+                    f"Reset anomalies: {anomaly_types.get('reset', 0)}\n"
+                    f"Skip anomalies: {anomaly_types.get('skip', 0)}"
+                )
+                self.logger.debug(
+                    f"[DEBUG] Anomaly details:\n"
+                    f"Max reset delta: {self.results[self.results['type'] == 'reset']['delta'].min()}\n"
+                    f"Max skip delta: {self.results[self.results['type'] == 'skip']['delta'].max()}"
+                )
+            else:
+                self.logger.debug("[DEBUG] No page view order anomalies detected")
+
             return data
 
         except Exception as e:
-            self.logger.error(f"Detection failed: {str(e)}")
+            self.logger.error(f"[ERROR] Detection failed: {str(e)}")
             raise
 
     def generate_report(self) -> dict:
         if self.results.empty:
+            self.logger.debug("[DEBUG] No anomalies found for report generation")
             return {
                 "summary": "No page view order anomalies detected.",
                 "metrics": {},
@@ -81,6 +120,13 @@ class PageViewOrderDetector(BaseAnomalyDetector):
             }
 
         counts = self.results["type"].value_counts().to_dict()
+        
+        # Логирование перед генерацией отчета
+        self.logger.debug(
+            f"[DEBUG] Generating report for {len(self.results)} anomalies\n"
+            f"Total records processed: {self.total_records}\n"
+            f"Anomaly rate: {len(self.results)/self.total_records:.2%}"
+        )
 
         def plot():
             fig, axes = plt.subplots(1, 2, figsize=(12, 6))
@@ -108,8 +154,9 @@ class PageViewOrderDetector(BaseAnomalyDetector):
             axes[1].set_title("Normal vs Anomalous Records")
 
             plt.tight_layout()
+            self.logger.debug("[DEBUG] Anomaly summary plots created")
 
-        return {
+        report = {
             "summary": f"Found {len(self.results)} anomalies across sessions.",
             "metrics": {
                 "total_anomalies": int(len(self.results)),
@@ -122,3 +169,6 @@ class PageViewOrderDetector(BaseAnomalyDetector):
                 "anomalies_summary": plot
             }
         }
+        
+        self.logger.debug("[DEBUG] Report generated successfully")
+        return report
